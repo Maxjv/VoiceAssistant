@@ -1,0 +1,9 @@
+node_modules/
+.env
+*.log
+.run-pids.json
+cloudflared.exe
+*.exe
+*.zip
+*.txt
+.env

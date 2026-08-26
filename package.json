@@ -1,0 +1,32 @@
+{
+  "name": "voiceassistant",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "bin": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "start npm start && npm run tunnel",
+    "start": "node server.js",
+    "tunnel": "node start_tunnel.js",
+    "build": "pkg . --targets node18-win-x64 --output VoiceAssistant_TFTE.exe"
+  },
+  "pkg": {
+    "assets": [
+      "public/**/*"
+    ]
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "groq-sdk": "^1.5.0",
+    "http-proxy-middleware": "^2.0.6",
+    "msedge-tts": "^2.0.7"
+  }
+}

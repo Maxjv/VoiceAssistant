@@ -1,0 +1,1097 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>TFTE Voice Assistant</title>
+    <link rel="stylesheet" href="style.css?v=13">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+</head>
+
+<body>
+    <button id="repoBtn" class="left-margin-toggle" title="Abrir Historial de Tareas">
+        <span class="material-icons-round">chevron_right</span>
+    </button>
+    <div class="app-shell">
+        <!-- BARRA DE TAREAS PENDIENTES -->
+        <div id="pendingTasksBar" class="pending-tasks-bar hidden">
+            <div class="pending-tasks-header" onclick="togglePendingTasks()">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span>Próximas Tareas (Control)</span>
+                    <span id="queueCountBadge"
+                        style="display: none; background: #0284c7; color: white; font-size: 0.65rem; font-weight: 700; padding: 1px 7px; border-radius: 999px; letter-spacing: 0.02em;">0
+                        en cola</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span id="queueActiveIndicator"
+                        style="display: none; color: #38bdf8; font-size: 0.72rem; align-items: center; gap: 4px; font-weight: 600;">
+                        <span class="material-icons-round"
+                            style="font-size: 0.9rem; animation: spin 2s linear infinite;">sync</span> Procesando cola
+                    </span>
+                    <span class="material-icons-round" id="pendingTasksIcon">expand_less</span>
+                </div>
+            </div>
+            <!-- BANNER DE ESTADO DE LA COLA -->
+            <div id="queueStatusBanner"
+                style="display: none; background: rgba(2, 132, 199, 0.12); border-bottom: 1px solid rgba(56, 189, 248, 0.18); padding: 6px 14px; font-size: 0.73rem; color: #7dd3fc; justify-content: space-between; align-items: center;">
+                <div
+                    style="display: flex; align-items: center; gap: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                    <span class="material-icons-round" style="font-size: 0.95rem; color: #38bdf8;">playlist_play</span>
+                    <span id="queueStatusText">Cola de ejecución activa</span>
+                </div>
+                <button onclick="window.clearExecutionQueue(event)"
+                    style="background: none; border: none; color: #f87171; font-size: 0.7rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 2px;">
+                    <span class="material-icons-round" style="font-size: 0.85rem;">cancel</span> Detener cola
+                </button>
+            </div>
+            <div class="pending-tasks-content" id="pendingTasksContent">
+                <div style="color: #94a3b8; font-size: 0.8rem; padding: 10px;">Cargando...</div>
+            </div>
+        </div>
+        <aside class="side-rail">
+            <div class="rail-brand" title="TFTE Assistant — Conectado a tu proyecto local">
+                <span class="material-icons-round">graphic_eq</span>
+                <span class="rail-label">TFTE</span>
+            </div>
+
+            <div class="rail-divider"></div>
+
+            <nav class="rail-tabs">
+                <button id="btnReact" class="rail-btn active" title="Ver App (npm start)">
+                    <span class="material-icons-round">apps</span>
+                    <span class="rail-label">TFTE</span>
+                </button>
+                <button id="btnPlan" class="rail-btn" title="Ver Plan de Implementación">
+                    <span class="material-icons-round">description</span>
+                    <span class="rail-label">Plan</span>
+                </button>
+                <button id="btnHtml" class="rail-btn" title="Control — TFTE Next Steps MainApp 2">
+                    <span class="material-icons-round">build</span>
+                    <span class="rail-label">Control</span>
+                </button>
+                <button id="btnImgs" class="rail-btn" title="Ver imágenes de FrontImgs">
+                    <span class="material-icons-round">photo_library</span>
+                    <span class="rail-label">Imgs</span>
+                </button>
+                <div id="actionStatusLabel"
+                    style="font-size: 0.75rem; color: #a855f7; padding: 6px 12px; margin-left: 10px; background: rgba(168, 85, 247, 0.1); border-radius: 6px; border: 1px solid rgba(168,85,247,0.3); white-space: nowrap; font-weight: bold; display: none;">
+                </div>
+            </nav>
+
+            <select id="htmlSelector" class="rail-select-hidden" title="Elegir documento HTML">
+                <option value="/preview/TFTE Next Steps MainApp 2.html">Control</option>
+            </select>
+
+            <div class="rail-spacer"></div>
+
+            <div class="rail-actions">
+                <button id="zoomOutBtn" class="rail-icon-btn" title="Alejar (ver más achicado)">
+                    <span class="material-icons-round">zoom_out</span>
+                </button>
+                <span id="zoomLevelLabel" class="zoom-level-label">100%</span>
+                <button id="zoomInBtn" class="rail-icon-btn" title="Acercar">
+                    <span class="material-icons-round">zoom_in</span>
+                </button>
+
+                <div style="width: 1px; height: 24px; background: rgba(255,255,255,0.2); margin: 0 10px;"></div>
+
+                <!-- Botón Git Sync Elegante (Pill Design) -->
+                <div
+                    style="display: flex; align-items: center; background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 2px; margin: 0 4px; box-shadow: inset 0 1px 4px rgba(0,0,0,0.2);">
+                    <button id="gitSyncBtn" title="Respaldar manual"
+                        style="background: transparent; border: none; color: #94a3b8; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 4px; border-radius: 6px; transition: all 0.2s;"
+                        onmouseover="this.style.background='rgba(255,255,255,0.05)'; this.style.color='#38bdf8'"
+                        onmouseout="this.style.background='transparent'; this.style.color='#94a3b8'">
+                        <span class="material-icons-round" id="gitSyncIcon"
+                            style="font-size: 1.2rem;">cloud_upload</span>
+                    </button>
+                    <div style="width: 1px; height: 14px; background: rgba(255,255,255,0.1); margin: 0 2px;"></div>
+                    <button id="autoGitSyncBtn" title="Activar/Desactivar Auto-Sync al guardar"
+                        style="background: transparent; border: none; color: #64748b; font-size: 0.65rem; font-weight: 700; cursor: pointer; padding: 4px 6px; border-radius: 6px; transition: all 0.2s; letter-spacing: 0.05em;">
+                        AUTO
+                    </button>
+                </div>
+
+                <button id="btnAgentSettings" class="rail-icon-btn" title="Ajustes de Agente y Contexto"
+                    style="color: #60a5fa;">
+                    <span class="material-icons-round">settings</span>
+                </button>
+                <button id="fullscreenBtn" class="rail-icon-btn" title="Pantalla completa">
+                    <span class="material-icons-round" id="fullscreenIcon">fullscreen</span>
+                </button>
+            </div>
+        </aside>
+
+        <main class="main-content" style="position: relative;">
+            <iframe id="iframeReact" class="app-iframe" src="/react" frameborder="0"
+                style="width: 100%; height: 100%;"></iframe>
+            <iframe id="iframeHtml" class="app-iframe" src="/preview/TFTE Next Steps MainApp 2.html" frameborder="0"
+                style="width: 100%; height: 100%; opacity: 0; pointer-events: none; z-index: -1;"></iframe>
+            <iframe id="iframePlan" class="app-iframe" src="/plan.html" frameborder="0"
+                style="width: 100%; height: 100%; opacity: 0; pointer-events: none; z-index: -1;"></iframe>
+            <iframe id="iframeImgs" class="app-iframe" src="/gallery.html" frameborder="0"
+                style="width: 100%; height: 100%; opacity: 0; pointer-events: none; z-index: -1;"></iframe>
+        </main>
+
+        <div class="assistant-float">
+            <div class="status-indicator" id="statusIndicator">
+                <div class="pulse-ring"></div>
+                <span class="status-text" id="statusText">Listo</span>
+            </div>
+            <div class="agent-mode-wrap">
+                <button id="agentModeBtn" class="fab fab-small"
+                    title="Tocar: Modo Agente on/off. Mantener presionado: elegir Claude o Gemini">
+                    <span class="material-icons-round">smart_toy</span>
+                </button>
+                <div id="backendMenu" class="backend-menu hidden">
+                    <button class="backend-option" data-backend="claude">Claude</button>
+                    <button class="backend-option" data-backend="gemini">Gemini</button>
+                </div>
+            </div>
+            <button id="micBtn" class="fab fab-main" title="Hablar">
+                <span class="material-icons-round" id="micIcon">mic</span>
+            </button>
+            <button id="keyboardBtn" class="fab fab-small"
+                title="Escribir en vez de hablar (más preciso que el reconocimiento de voz)">
+                <span class="material-icons-round">keyboard</span>
+            </button>
+
+        </div>
+
+        <div id="textPanelBackdrop"
+            style="display: none; position: fixed; inset: 0; z-index: 940; background: transparent;"></div>
+
+        <div id="textPanel" class="text-panel hidden">
+            <input id="folderInput" type="text"
+                placeholder="Carpeta (opcional, ej: src/interface/apps/2mog) — solo aplica en Modo Agente"
+                autocomplete="off">
+            <div class="text-panel-row">
+                <textarea id="textInput" rows="1" placeholder="Escribí tu mensaje..." autocomplete="off"></textarea>
+                <button id="sendTextBtn" title="Enviar">
+                    <span class="material-icons-round">send</span>
+                </button>
+            </div>
+        </div>
+
+        <div id="popupsContainer" class="popups-container">
+        </div>
+
+        <div id="uiBackdrop"
+            style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: transparent; z-index: 998;">
+        </div>
+
+        <div id="tasksContainer" class="tasks-container hidden">
+            <div class="tasks-header"
+                style="padding: 16px 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span class="material-icons-round" style="color: #38bdf8; font-size: 1.2rem;">history</span>
+                    <h3 style="margin: 0; font-size: 0.95rem; color: #f8fafc; font-weight: 700;">Historial de Tareas
+                    </h3>
+                </div>
+                <button id="closeRepoBtn" class="close-repo-btn" title="Cerrar"
+                    style="background: rgba(255,255,255,0.06); border: none; color: rgba(255,255,255,0.7); cursor: pointer; display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 8px; transition: all 0.2s;">
+                    <span class="material-icons-round" style="font-size: 1.1rem;">close</span>
+                </button>
+            </div>
+            <div id="repoList" class="repo-list" style="padding: 16px; gap: 12px;">
+            </div>
+            <div class="tasks-footer"
+                style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-top: 1px solid rgba(255, 255, 255, 0.08); background: rgba(0,0,0,0.2);">
+                <button id="clearRepoBtn" class="rail-icon-btn" title="Limpiar historial"
+                    style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.25); color: #f87171; border-radius: 6px; padding: 6px 10px; font-size: 0.75rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; cursor: pointer;">
+                    <span class="material-icons-round" style="font-size: 1rem;">delete_sweep</span> Limpiar Historial
+                </button>
+                <span style="font-size: 0.7rem; color: #64748b;">TFTE Assistant</span>
+            </div>
+        </div>
+
+        <div id="responseToast" class="response-toast hidden">
+            <div style="flex: 1;">
+                <p id="transcript" contenteditable="true"
+                    style="outline: none; border-bottom: 1px dashed rgba(255,255,255,0.3); padding-bottom: 4px; min-height: 20px;">
+                </p>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <button id="sendToastBtn" class="toast-action-btn btn-ok"
+                    style="display: inline-block; padding: 4px 12px; border-radius: 6px; font-weight: bold; border: none; cursor: pointer;">Enviar</button>
+                <button id="closeToast" class="close-toast" style="position: static; margin-left: 5px;">&times;</button>
+            </div>
+        </div>
+
+        <div id="contextModal" class="startup-modal hidden" style="display: none; z-index: 999999;">
+            <div class="startup-card" style="max-width: 480px;">
+                <div
+                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span class="material-icons-round" style="color: #38bdf8; font-size: 1.3rem;">tune</span>
+                        <h2 style="font-size: 1.15rem; margin: 0; color: #f8fafc; font-weight: 700;">Gestión de
+                            Contextos</h2>
+                        <div id="contextStatusLabel"
+                            style="font-size: 0.68rem; color: #38bdf8; padding: 2px 8px; background: rgba(56, 189, 248, 0.12); border-radius: 999px; border: 1px solid rgba(56,189,248,0.25); font-weight: 600;">
+                            Listo
+                        </div>
+                    </div>
+                    <button id="closeContextModal" title="Cerrar"
+                        style="background: rgba(255, 255, 255, 0.06); border: none; color: #94a3b8; width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s;">
+                        <span class="material-icons-round" style="font-size: 1.1rem;">close</span>
+                    </button>
+                </div>
+
+                <div id="auth-warning"
+                    style="background: rgba(56, 189, 248, 0.06); border: 1px solid rgba(56, 189, 248, 0.18); color: #bae6fd; padding: 10px 14px; margin-bottom: 16px; border-radius: 10px; font-size: 0.78rem; line-height: 1.45;">
+                    <strong style="display: flex; align-items: center; gap: 5px; color: #38bdf8; margin-bottom: 3px;">
+                        <span class="material-icons-round" style="font-size: 0.95rem;">lightbulb</span> Tip de
+                        Autenticación
+                    </strong>
+                    Si el asistente no responde, ejecuta <code
+                        style="background: rgba(0,0,0,0.3); padding: 1px 5px; border-radius: 4px; color: #38bdf8; font-family: monospace;">agy</code>
+                    o <code
+                        style="background: rgba(0,0,0,0.3); padding: 1px 5px; border-radius: 4px; color: #38bdf8; font-family: monospace;">claude login</code>
+                    en tu PC para autenticarte.
+                </div>
+
+                <div class="startup-input-group">
+                    <label>Modelo IA (Antigravity)</label>
+                    <div style="display: flex; gap: 8px;">
+                        <select id="geminiModelSelect"
+                            style="flex: 1; background: rgba(2, 6, 23, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); padding: 10px 14px; border-radius: 10px; color: #f1f5f9; outline: none;">
+                            <option value="gemini-3.7-flash-medium">Gemini 3.7 Flash Medium</option>
+                            <option value="gemini-3.6-flash-medium">Gemini 3.6 Flash Medium</option>
+                            <option value="gemini-3.5-flash-medium">Gemini 3.5 Flash Medium</option>
+                            <option value="gemini-3.1-pro-high" selected>Gemini 3.1 Pro High</option>
+                            <option value="sonnet-4.6">Sonnet 4.6</option>
+                            <option value="opus-4.6">Opus 4.6</option>
+                            <option value="gpt-oss-120b">GPT-OSS 120B</option>
+                        </select>
+                        <button id="applyModelBtn" title="Cambiar modelo sin recargar contexto"
+                            style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); padding: 0 14px; border-radius: 8px; cursor: pointer; font-size: 0.8rem; font-weight: 600; white-space: nowrap; transition: all 0.2s;">
+                            <span class="material-icons-round"
+                                style="font-size: 1rem; vertical-align: middle;">swap_horiz</span> Aplicar
+                        </button>
+                    </div>
+                </div>
+
+                <div class="startup-input-group">
+                    <label>Contexto Activo (Selecciónalo de la lista)</label>
+                    <select id="savedContextsSelect">
+                    </select>
+                </div>
+
+                <div class="startup-input-group">
+                    <label>Añadir Nuevo Contexto</label>
+                    <div style="display: flex; gap: 8px; margin-bottom: 18px;">
+                        <input type="text" id="newContextFolder" placeholder="Ej: C:\TFTE\VoiceAssistant"
+                            style="flex: 1;">
+                        <button id="addContextBtn"
+                            style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); padding: 0 14px; border-radius: 8px; cursor: pointer; font-size: 0.8rem; font-weight: 600; white-space: nowrap; display: flex; align-items: center; gap: 4px; transition: all 0.2s;">
+                            <span class="material-icons-round" style="font-size: 0.95rem;">add</span> Añadir
+                        </button>
+                    </div>
+
+                    <button id="startContextBtn" class="startup-btn">
+                        <span class="material-icons-round" style="font-size: 1.1rem;">rocket_launch</span> Cargar
+                        Contexto y Empezar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL INTERACTIVO DE LOGIN VS CRÉDITOS (AQUÍ ESTÁ LA NUEVA UX) -->
+        <div id="modal-creditos" class="modal-oculto">
+            <!-- Paso 1: Preguntar -->
+            <div class="modal-contenido" id="modal-step-1">
+                <h2 id="modal-titulo">⚠️ Falla de Conexión con IA</h2>
+                <p>El agente <strong id="modal-agent-name" style="color: #38bdf8;"></strong> no responde a la validación
+                    de contexto. ¿Ya has iniciado sesión en la terminal de tu PC?</p>
+                <div class="modal-botones">
+                    <button id="btn-auth-yes" class="btn-primario" style="background: #eab308; color:#000;">Sí, ya estoy
+                        logueado</button>
+                    <button id="btn-auth-no" class="btn-secundario" style="background: #38bdf8; color:#0f172a;">No / No
+                        estoy seguro</button>
+                </div>
+                <button id="btn-cerrar-modal-1"
+                    style="margin-top:20px; background:none; border:none; color:#94a3b8; cursor:pointer;">Cancelar y
+                    volver</button>
+            </div>
+
+            <!-- Paso 2 (Si responde SÍ): No tiene créditos -->
+            <div class="modal-contenido" id="modal-step-yes" style="display:none;">
+                <h2>🪙 Sin Créditos en la IA</h2>
+                <p>Si ya estás logueado y sigue fallando, significa que tu cuota de la API se ha agotado. Necesitas
+                    recargar saldo (tokens) en la consola web para usar el Modo Agente.</p>
+                <div class="modal-botones">
+                    <button id="btn-login-ia" class="btn-primario">Ir a recargar saldo</button>
+                    <button id="btn-cerrar-modal-2" class="btn-secundario">Cerrar</button>
+                </div>
+            </div>
+
+            <!-- Paso 3 (Si responde NO): Instrucciones de login -->
+            <div class="modal-contenido" id="modal-step-no" style="display:none;">
+                <h2>🔑 Requiere Inicio de Sesión</h2>
+                <p>Ve a tu PC (Servidor), abre una ventana de consola (CMD o PowerShell) y escribe el siguiente comando:
+                </p>
+                <code id="cmd-instruccion"
+                    style="display:block; background:#0f172a; padding:10px; border-radius:6px; color:#38bdf8; font-size:1.2rem; font-weight:bold; margin-bottom:15px; letter-spacing: 1px;">claude login</code>
+                <p style="font-size:0.85rem; color:#94a3b8; margin-bottom:15px;">Una vez completado el inicio de sesión
+                    en la web que se abrirá, vuelve aquí e intenta de nuevo.</p>
+                <div class="modal-botones">
+                    <button id="btn-cerrar-modal-3" class="btn-primario">Entendido, cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <p id="instructionText" style="display: none;"></p>
+    <audio id="agentAudio" style="display: none;"></audio>
+
+    <style>
+        .popups-container {
+            position: fixed;
+            bottom: calc(40px + 12px + env(safe-area-bottom));
+            left: 12px;
+            width: calc(100% - 24px);
+            max-width: 500px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 1000;
+            pointer-events: none;
+        }
+
+        .tasks-container {
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            bottom: 75px;
+            width: 380px;
+            max-width: calc(100vw - 30px);
+            background: rgba(15, 23, 42, 0.92);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 16px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.05);
+            display: flex;
+            flex-direction: column;
+            z-index: 999;
+            transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+            overflow: hidden;
+        }
+
+        .startup-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(10, 15, 25, 0.85);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            z-index: 99999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            box-sizing: border-box;
+            overflow-y: auto;
+            transition: opacity 0.3s ease;
+        }
+
+        .startup-modal.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .startup-card {
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 20px;
+            padding: 24px 28px;
+            width: 100%;
+            max-width: 480px;
+            max-height: calc(100vh - 48px);
+            overflow-y: auto;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6);
+            color: white;
+            font-family: 'Inter', sans-serif;
+            box-sizing: border-box;
+            margin: auto;
+            scrollbar-width: none;
+        }
+
+        .startup-card::-webkit-scrollbar {
+            display: none !important;
+            width: 0 !important;
+            height: 0 !important;
+        }
+
+        .startup-card h2 {
+            margin-top: 0;
+            margin-bottom: 8px;
+            font-size: 1.3rem;
+            color: #f8fafc;
+        }
+
+        .startup-card p {
+            color: #94a3b8;
+            font-size: 0.88rem;
+            margin-bottom: 16px;
+        }
+
+        .startup-input-group {
+            margin-bottom: 16px;
+        }
+
+        .startup-input-group label {
+            display: block;
+            font-size: 0.76rem;
+            font-weight: 600;
+            color: #94a3b8;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .startup-input-group input,
+        .startup-input-group select {
+            width: 100%;
+            background: rgba(2, 6, 23, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 10px 14px;
+            border-radius: 10px;
+            color: #f1f5f9;
+            font-size: 0.88rem;
+            outline: none;
+            box-sizing: border-box;
+            transition: all 0.2s ease;
+        }
+
+        .startup-input-group input:focus,
+        .startup-input-group select:focus {
+            border-color: #38bdf8;
+            box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+            background: rgba(2, 6, 23, 0.8);
+        }
+
+        .startup-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #0284c7, #2563eb);
+            color: white;
+            border: none;
+            padding: 12px 16px;
+            border-radius: 10px;
+            font-size: 0.92rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            box-shadow: 0 4px 15px rgba(2, 132, 199, 0.3);
+        }
+
+        .startup-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(2, 132, 199, 0.45);
+        }
+
+        .startup-btn:active {
+            transform: scale(0.98);
+        }
+
+        .tasks-container.hidden {
+            transform: translateX(calc(-100% - 30px));
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .repo-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .repo-header h3 {
+            margin: 0;
+            color: white;
+            font-size: 1.1rem;
+        }
+
+        .close-repo-btn {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        .repo-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .task-card {
+            pointer-events: auto;
+            background: rgba(30, 41, 59, 0.95);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 14px;
+            padding: 14px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            animation: slideIn 0.3s ease;
+        }
+
+        .task-card-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr auto;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .task-card-row .task-col-question,
+        .task-card-row .task-col-response {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .task-card-row .task-col-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            justify-content: center;
+        }
+
+        @media (max-width: 600px) {
+            .task-card-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .task-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .task-status {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .task-status.queued {
+            color: var(--text-secondary);
+        }
+
+        .task-status.thinking {
+            color: var(--accent-color);
+        }
+
+        .task-status.waiting {
+            color: #f59e0b;
+        }
+
+        .task-status.executing {
+            color: var(--success-color);
+        }
+
+        .task-text {
+            color: #f1f5f9;
+            font-size: 0.9rem;
+            line-height: 1.4;
+            margin: 0;
+            white-space: pre-wrap;
+        }
+
+        .task-ai-response {
+            color: #93c5fd;
+            font-size: 0.9rem;
+            margin: 0;
+            font-style: italic;
+            border-left: 3px solid rgba(59, 130, 246, 0.5);
+            padding-left: 8px;
+        }
+
+        .task-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 5px;
+        }
+
+        .task-btn {
+            flex: 1;
+            padding: 10px;
+            border-radius: 8px;
+            border: none;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 6px;
+            transition: transform 0.1s, opacity 0.2s;
+        }
+
+        .task-btn:active {
+            transform: scale(0.96);
+        }
+
+        .btn-ok {
+            background: linear-gradient(145deg, #16a34a, #15803d);
+            color: white;
+            box-shadow: 0 4px 10px -2px rgba(22, 163, 74, 0.5);
+        }
+
+        .btn-cancel {
+            background: linear-gradient(145deg, #475569, #334155);
+            color: white;
+        }
+
+        .response-toast {
+            position: fixed;
+            bottom: calc(56px + 12px + env(safe-area-inset-bottom));
+            left: 12px;
+            right: 12px;
+            background: rgba(30, 41, 59, 0.95);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 14px;
+            padding: 14px 16px 14px 16px;
+            z-index: 1005;
+            max-height: 35vh;
+            overflow-y: auto;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            transition: transform 0.3s ease, opacity 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .response-toast.hidden {
+            transform: translateY(100%);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .response-toast p {
+            margin: 0;
+            color: #f1f5f9;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            word-break: break-word;
+            white-space: pre-wrap;
+            overflow-x: hidden;
+        }
+
+        .response-toast .user-text {
+            color: #93c5fd;
+            font-style: italic;
+        }
+
+        .response-toast .ai-text {
+            color: #f1f5f9;
+        }
+
+        .close-toast {
+            position: absolute;
+            top: 8px;
+            right: 10px;
+            background: none;
+            border: none;
+            color: #94a3b8;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 4px 8px;
+            line-height: 1;
+        }
+
+        .close-toast:hover {
+            color: #f1f5f9;
+        }
+
+        .pending-tasks-bar {
+            position: fixed;
+            bottom: 56px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 82%;
+            max-width: 960px;
+            background: rgba(15, 23, 42, 0.92);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-bottom: none;
+            border-radius: 16px 16px 0 0;
+            box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.5);
+            z-index: 49;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .pending-tasks-bar.hidden {
+            transform: translate(-50%, calc(100% - 36px));
+        }
+
+        .pending-tasks-header {
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            cursor: pointer;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: #f1f5f9;
+            background: rgba(255, 255, 255, 0.04);
+            border-radius: 16px 16px 0 0;
+            user-select: none;
+            transition: background 0.2s;
+        }
+
+        .pending-tasks-header:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .pending-tasks-content {
+            padding: 12px;
+            max-height: 240px;
+            overflow-y: auto;
+            font-size: 0.78rem;
+            color: #cbd5e1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            scrollbar-width: none;
+            /* Firefox */
+            -ms-overflow-style: none;
+            /* IE/Edge */
+        }
+
+        .pending-tasks-content::-webkit-scrollbar,
+        .repo-list::-webkit-scrollbar {
+            display: none !important;
+            width: 0 !important;
+            height: 0 !important;
+        }
+
+        .pending-task-item {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            border-radius: 10px;
+            padding: 8px 12px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            transition: all 0.2s ease;
+        }
+
+        .pending-task-item:hover {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: rgba(56, 189, 248, 0.25);
+        }
+
+        .pending-task-btn-action {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #94a3b8;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 5px;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        .pending-task-btn-action:hover {
+            color: white;
+            background: rgba(255, 255, 255, 0.15);
+            transform: scale(1.05);
+        }
+
+        .pending-task-btn-complete:hover {
+            background: rgba(16, 185, 129, 0.25) !important;
+            color: #34d399 !important;
+            border-color: rgba(16, 185, 129, 0.4) !important;
+        }
+
+        .pending-task-btn-send:hover {
+            background: rgba(56, 189, 248, 0.25) !important;
+            color: #38bdf8 !important;
+            border-color: rgba(56, 189, 248, 0.4) !important;
+        }
+
+        .left-margin-toggle {
+            position: fixed;
+            top: 50%;
+            left: 0;
+            transform: translateY(-50%);
+            width: 22px;
+            height: 64px;
+            background: rgba(30, 41, 59, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-left: none;
+            border-radius: 0 8px 8px 0;
+            color: #94a3b8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 100;
+            backdrop-filter: blur(8px);
+            transition: all 0.2s ease;
+        }
+
+        .left-margin-toggle:hover {
+            width: 28px;
+            color: white;
+            background: #3b82f6;
+        }
+    </style>
+
+    <div id="historialModal" class="hidden"
+        style="position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); z-index: 100000; display: none; align-items: center; justify-content: center; padding: 20px;">
+        <div
+            style="background: #1a1a1a; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; width: 90vw; max-width: 800px; height: 85vh; display: flex; flex-direction: column; box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
+            <div
+                style="display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                <h2 style="margin: 0; font-size: 1.2rem; color: #fff;">Historial del Agente</h2>
+                <button id="btnCerrarHistorial"
+                    style="background: none; border: none; color: #94a3b8; font-size: 1.5rem; cursor: pointer;">&times;</button>
+            </div>
+            <div id="historialContent"
+                style="flex: 1; overflow-y: auto; padding: 20px; font-family: monospace; font-size: 0.9rem; color: #e2e8f0; line-height: 1.5; white-space: pre-wrap; scroll-behavior: smooth;">
+                Cargando historial...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const btnSettings = document.getElementById('btnAgentSettings');
+            const contextModal = document.getElementById('contextModal');
+            const closeBtn = document.getElementById('closeContextModal');
+            const selectEl = document.getElementById('savedContextsSelect');
+            const newContextInput = document.getElementById('newContextFolder');
+            const addContextBtn = document.getElementById('addContextBtn');
+            const statusLabel = document.getElementById('contextStatusLabel');
+            const folderInputHidden = document.getElementById('folderInput');
+
+            let contexts = JSON.parse(localStorage.getItem('tfte_contexts') || '[]');
+            let activeContext = localStorage.getItem('tfte_active_context');
+
+            try {
+                const res = await fetch('/api/get-context');
+                if (res.ok) {
+                    const data = await res.json();
+                    const serverContext = data.contextPath;
+
+                    if (serverContext) {
+                        if (!contexts.includes(serverContext)) contexts.push(serverContext);
+                        activeContext = serverContext;
+                        localStorage.setItem('tfte_contexts', JSON.stringify(contexts));
+                        localStorage.setItem('tfte_active_context', activeContext);
+                    }
+                }
+            } catch (err) {
+                console.warn("No se pudo obtener el contexto del servidor", err);
+            }
+
+            const geminiModelSelect = document.getElementById('geminiModelSelect');
+
+            let savedModel = localStorage.getItem('tfte_gemini_model') || 'gemini-3.1-pro-high';
+            if (geminiModelSelect) {
+                geminiModelSelect.value = savedModel;
+                geminiModelSelect.addEventListener('change', (e) => {
+                    localStorage.setItem('tfte_gemini_model', e.target.value);
+                });
+            }
+
+            if (contexts.length === 0) {
+                contexts = ['C:\\TFTE'];
+                activeContext = 'C:\\TFTE';
+            }
+
+            function renderSelect() {
+                selectEl.innerHTML = '';
+                contexts.forEach(ctx => {
+                    const opt = document.createElement('option');
+                    opt.value = ctx;
+                    opt.innerText = ctx;
+                    if (ctx === activeContext) opt.selected = true;
+                    selectEl.appendChild(opt);
+                });
+                updateActive(activeContext);
+            }
+
+            function updateActive(ctx) {
+                activeContext = ctx;
+                localStorage.setItem('tfte_active_context', ctx);
+                if (statusLabel) statusLabel.innerText = 'Contexto: ' + ctx;
+                if (folderInputHidden) folderInputHidden.value = ctx;
+            }
+
+            renderSelect();
+
+            selectEl.addEventListener('change', (e) => {
+                updateActive(e.target.value);
+            });
+
+            addContextBtn.addEventListener('click', () => {
+                const val = newContextInput.value.trim();
+                if (val && !contexts.includes(val)) {
+                    contexts.push(val);
+                    localStorage.setItem('tfte_contexts', JSON.stringify(contexts));
+                    renderSelect();
+                    selectEl.value = val;
+                    updateActive(val);
+                    newContextInput.value = '';
+                }
+            });
+
+            if (btnSettings && contextModal) {
+                btnSettings.addEventListener('click', () => {
+                    contextModal.classList.remove('hidden');
+                    contextModal.style.display = 'flex';
+                });
+
+                closeBtn.addEventListener('click', () => {
+                    contextModal.classList.add('hidden');
+                    setTimeout(() => contextModal.style.display = 'none', 300);
+                });
+
+                // Cerrar al clickear fuera del modal (en el backdrop oscuro)
+                contextModal.addEventListener('click', (e) => {
+                    if (e.target === contextModal) {
+                        contextModal.classList.add('hidden');
+                        setTimeout(() => contextModal.style.display = 'none', 300);
+                    }
+                });
+            }
+
+            // Ocultar scrollbar derecha en iframes de Plan y Control
+            function hideIframeScrollbar(iframeEl) {
+                if (!iframeEl) return;
+                const inject = () => {
+                    try {
+                        const doc = iframeEl.contentDocument || iframeEl.contentWindow.document;
+                        if (doc && !doc.getElementById('hide-scrollbar-style')) {
+                            const s = doc.createElement('style');
+                            s.id = 'hide-scrollbar-style';
+                            s.textContent = 'html, body { scrollbar-width: none !important; -ms-overflow-style: none !important; } html::-webkit-scrollbar, body::-webkit-scrollbar { display: none !important; }';
+                            doc.head.appendChild(s);
+                        }
+                    } catch (e) { /* cross-origin iframe, skip */ }
+                };
+                iframeEl.addEventListener('load', inject);
+                inject(); // en caso de que ya haya cargado
+            }
+            hideIframeScrollbar(document.getElementById('iframePlan'));
+            hideIframeScrollbar(document.getElementById('iframeHtml'));
+        });
+    </script>
+
+    <!-- LICENSE MODAL -->
+    <div id="licenseModal" class="startup-modal hidden" style="display: none; z-index: 9999;">
+        <div class="startup-card" style="max-width: 450px; text-align: center;">
+            <div style="margin-bottom: 20px;">
+                <span class="material-icons-round" style="font-size: 3rem; color: #f59e0b;">lock_clock</span>
+                <h2 style="font-size: 1.5rem; margin: 10px 0; color: white;">Trial Expirado</h2>
+                <p style="color: #94a3b8; font-size: 0.95rem; line-height: 1.5;">
+                    Tu prueba gratuita de 14 días ha finalizado. Para seguir utilizando las funciones de Agente de IA y
+                    Asistente de Voz, necesitas activar una licencia PRO.
+                </p>
+                <p style="color: #94a3b8; font-size: 0.95rem; margin-top: 10px;">
+                    <em>(La vista local de TFTE y Galería siguen activas).</em>
+                </p>
+            </div>
+
+            <div class="startup-input-group" style="text-align: left;">
+                <label style="color: #38bdf8;">Clave de Licencia</label>
+                <input type="text" id="licenseKeyInput" placeholder="Ej: TFTE-PRO-..."
+                    style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid rgba(56, 189, 248, 0.4); background: rgba(15, 23, 42, 0.8); color: white; margin-bottom: 15px; font-size: 1rem; text-align: center; letter-spacing: 1px;">
+                <button id="verifyLicenseBtn" class="startup-btn"
+                    style="width: 100%; background: #38bdf8; color: #0f172a;">Validar Licencia</button>
+            </div>
+            <div style="margin-top: 15px;">
+                <a href="#" style="color: #94a3b8; font-size: 0.85rem; text-decoration: underline;">Comprar Licencia Pro
+                    (Próximamente)</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js?v=20260822_v4"></script>
+
+    <script>
+        let currentUpdate = null;
+
+        // El radar escanea cada 1 segundo (1000 milisegundos)
+        setInterval(async () => {
+            try {
+                const res = await fetch('/api/check-reload');
+                if (!res.ok) return;
+                const data = await res.json();
+
+                if (currentUpdate === null) {
+                    currentUpdate = data.lastUpdate; // Calibra el radar la primera vez
+                } else if (currentUpdate !== data.lastUpdate) {
+                    console.log('🔄 Cambios detectados por el radar. Recargando iframes estáticos...');
+                    currentUpdate = data.lastUpdate;
+
+                    // Recarga iframes visibles sin flash blanco (usa location.reload en vez de about:blank)
+                    ['iframeReact', 'iframeHtml', 'iframePlan', 'iframeImgs'].forEach(id => {
+                        const ifr = document.getElementById(id);
+                        if (ifr && ifr.style.opacity !== '0') {
+                            try {
+                                ifr.contentWindow.location.reload();
+                            } catch (e) {
+                                // Fallback cross-origin: about:blank → src
+                                const currentSrc = ifr.src;
+                                ifr.src = 'about:blank';
+                                setTimeout(() => { ifr.src = currentSrc; }, 50);
+                            }
+                        }
+                    });
+                }
+            } catch (e) {
+                // Ignora errores si el servidor se reinicia un segundo
+            }
+        }, 1000);
+    </script>
+</body>
+
+</html>
