@@ -649,6 +649,32 @@ app.get('/api/select-folder', (req, res) => {
     });
 });
 
+app.post('/api/init-react', (req, res) => {
+    const root = (process.env.CONTEXT_PATH || '').replace(/'/g, "''");
+    if (!root || !fs.existsSync(root)) return res.status(400).json({error: "CONTEXT_PATH inválido"});
+    
+    const psCmd = `
+        cd '${root}'
+        Write-Host 'Iniciando creacion de Proyecto React (Vite)...' -ForegroundColor Cyan
+        npm create vite@latest webapp -- --template react
+        if (Test-Path 'webapp') {
+            cd webapp
+            Write-Host 'Instalando dependencias (esto tomara un minuto)...' -ForegroundColor Yellow
+            npm install
+            Write-Host 'Finalizado exitosamente! Tu asistente lo detectara en breve. Puedes cerrar esta ventana.' -ForegroundColor Green
+        } else {
+            Write-Host 'Error al crear la carpeta webapp.' -ForegroundColor Red
+        }
+    `.replace(/\n/g, ';').replace(/"/g, '`"');
+
+    const args = `-NoProfile -NoExit -Command "${psCmd}"`;
+    
+    exec(`powershell.exe -NoProfile -Command "Start-Process powershell -ArgumentList '${args}'"`, (err) => {
+        if (err) return res.status(500).json({error: err.message});
+        res.json({success: true});
+    });
+});
+
 app.get('/api/serve-img', (req, res) => {
     if (!req.query.path) return res.status(400).send('No path');
     try {
