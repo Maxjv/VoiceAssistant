@@ -21,7 +21,10 @@
             background: var(--header-bg);
             border-bottom: 1px solid rgba(255,255,255,0.08);
             padding: 10px 16px;
-            display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+            display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;
+        }
+        #crumbs-container {
+            display: flex; align-items: center; gap: 8px; flex-wrap: wrap; flex: 1;
         }
         .crumb {
             background: none; border: none; color: var(--text-secondary);
@@ -73,7 +76,13 @@
     </style>
 </head>
 <body>
-    <header id="crumbs"></header>
+    <header>
+        <div id="crumbs-container"></div>
+        <button id="btnAddExtFolder" style="background: rgba(59, 130, 246, 0.15); border: 1px solid var(--accent-color); color: var(--accent-color); padding: 4px 10px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 0.8rem; font-weight: 600; transition: all 0.2s;">
+            <span class="material-icons-round" style="font-size: 1.1rem;">create_new_folder</span>
+            Añadir Carpeta
+        </button>
+    </header>
     <main>
         <div class="grid" id="grid"></div>
         <p class="empty" id="emptyMsg" style="display:none;">Carpeta vacía.</p>
@@ -84,22 +93,48 @@
 
     <script>
         const grid = document.getElementById('grid');
-        const crumbsEl = document.getElementById('crumbs');
+        const crumbsEl = document.getElementById('crumbs-container');
         const emptyMsg = document.getElementById('emptyMsg');
         const lightbox = document.getElementById('lightbox');
         const lightboxImg = document.getElementById('lightboxImg');
+        const btnAddExtFolder = document.getElementById('btnAddExtFolder');
 
-        function load(dir) {
-            fetch('/api/browse?dir=' + encodeURIComponent(dir))
+        let externalFolders = JSON.parse(localStorage.getItem('tfte_ext_folders') || '[]');
+
+        btnAddExtFolder.onclick = () => {
+            fetch('/api/select-folder')
                 .then(r => r.json())
-                .then(data => render(data.dir, data.folders || [], data.images || []))
+                .then(data => {
+                    if (data.path) {
+                        const name = data.path.split(/[\/\\]/).pop();
+                        if (!externalFolders.find(f => f.path === data.path)) {
+                            externalFolders.push({ name, path: data.path });
+                            localStorage.setItem('tfte_ext_folders', JSON.stringify(externalFolders));
+                        }
+                        load('', data.path); // Load it immediately
+                    } else if (data.error && data.error !== 'Cancelado') {
+                        alert(data.error);
+                    }
+                });
+        };
+
+        function load(dir, absDir = null) {
+            let url = '/api/browse?dir=' + encodeURIComponent(dir);
+            if (absDir) url = '/api/browse?abs_dir=' + encodeURIComponent(absDir);
+            fetch(url)
+                .then(r => r.json())
+                .then(data => render(data.dir, data.folders || [], data.images || [], data.isAbsolute, absDir))
                 .catch(() => { grid.innerHTML = ''; emptyMsg.style.display = 'block'; emptyMsg.textContent = 'Error cargando la carpeta.'; });
         }
 
-        function render(dir, folders, images) {
-            history.replaceState(null, '', '?dir=' + encodeURIComponent(dir));
+        function render(dir, folders, images, isAbsolute, absDir) {
+            if (isAbsolute) {
+                history.replaceState(null, '', '?abs_dir=' + encodeURIComponent(absDir));
+            } else {
+                history.replaceState(null, '', '?dir=' + encodeURIComponent(dir));
+            }
 
-            const parts = dir ? dir.split('/').filter(Boolean) : [];
+            const parts = isAbsolute ? absDir.split(/[\/\\]/).filter(Boolean) : (dir ? dir.split('/').filter(Boolean) : []);
             let acc = '';
             crumbsEl.innerHTML = '';
             const rootBtn = document.createElement('button');
@@ -122,19 +157,51 @@
                 crumbsEl.appendChild(b);
             });
 
+            });
+
             grid.innerHTML = '';
+            
+            // Add external folder shortcuts at root
+            if (!dir && !isAbsolute) {
+                externalFolders.forEach((ext, idx) => {
+                    const tile = document.createElement('div');
+                    tile.className = 'tile tile-folder';
+                    tile.innerHTML = '<span class="material-icons-round" style="color: #a855f7;">photo_library</span><span class="name"></span><button title="Eliminar" style="background:none;border:none;color:#94a3b8;position:absolute;top:4px;right:4px;cursor:pointer;"><span class="material-icons-round" style="font-size:1rem;">close</span></button>';
+                    tile.querySelector('.name').textContent = ext.name;
+                    tile.querySelector('button').onclick = (e) => {
+                        e.stopPropagation();
+                        externalFolders.splice(idx, 1);
+                        localStorage.setItem('tfte_ext_folders', JSON.stringify(externalFolders));
+                        load('');
+                    };
+                    tile.onclick = () => load('', ext.path);
+                    tile.style.position = 'relative';
+                    grid.appendChild(tile);
+                });
+            }
+
             folders.forEach(name => {
                 const tile = document.createElement('div');
                 tile.className = 'tile tile-folder';
                 tile.innerHTML = '<span class="material-icons-round">folder</span><span class="name"></span>';
                 tile.querySelector('.name').textContent = name;
-                tile.onclick = () => load(dir ? dir + '/' + name : name);
+                tile.onclick = () => {
+                    if (isAbsolute) load('', absDir + '\\' + name);
+                    else load(dir ? dir + '/' + name : name);
+                };
                 grid.appendChild(tile);
             });
             images.forEach(name => {
                 const tile = document.createElement('div');
                 tile.className = 'tile tile-img';
-                const src = '/preview/' + (dir ? dir + '/' : '') + name;
+                
+                let src = '';
+                if (isAbsolute) {
+                    src = '/api/serve-img?path=' + encodeURIComponent(absDir + '\\' + name);
+                } else {
+                    src = '/preview/' + (dir ? dir + '/' : '') + name;
+                }
+                
                 tile.innerHTML = '<img loading="lazy" src="' + src + '"><span class="name"></span>';
                 tile.querySelector('.name').textContent = name;
                 tile.onclick = () => { lightboxImg.src = src; lightbox.classList.remove('hidden'); };
@@ -146,8 +213,14 @@
 
         lightbox.addEventListener('click', () => lightbox.classList.add('hidden'));
 
-        const initialDir = new URLSearchParams(location.search).get('dir') || '';
-        load(initialDir);
+        const initialDir = new URLSearchParams(location.search).get('dir');
+        const initialAbs = new URLSearchParams(location.search).get('abs_dir');
+        
+        if (initialAbs) {
+            load('', initialAbs);
+        } else {
+            load(initialDir || '');
+        }
     </script>
 </body>
 </html>

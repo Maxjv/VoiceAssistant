@@ -12,6 +12,12 @@ const { exec } = require('child_process');
 // RUTA BASE REAL (Para escribir archivos: .env, watcher, etc.)
 const BASE_DIR = process.pkg ? path.dirname(process.execPath) : process.cwd();
 
+// Polyfill de crypto Web API para msedge-tts en Node 18 (entorno pkg)
+const _crypto = require('crypto');
+if (!global.crypto) {
+    global.crypto = _crypto.webcrypto;
+}
+
 require('dotenv').config({ path: path.join(BASE_DIR, '.env') });
 
 const TTS_VOICE = 'es-AR-ElenaNeural';
@@ -591,16 +597,21 @@ app.get('/api/tts', async (req, res) => {
 const IMG_EXT = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg']);
 
 app.get('/api/browse', (req, res) => {
-    const rel = (req.query.dir || '').replace(/^[/\\]+/, '');
-    const target = path.resolve(ROOT_DIR, rel);
-    if (!target.startsWith(ROOT_DIR)) return res.status(400).json({ error: 'Ruta inválida' });
+    let target = '';
+    let rel = '';
+    if (req.query.abs_dir) {
+        target = req.query.abs_dir;
+        rel = target;
+    } else {
+        rel = (req.query.dir || '').replace(/^[/\\]+/, '');
+        target = path.resolve(ROOT_DIR, rel);
+        if (!target.startsWith(ROOT_DIR)) return res.status(400).json({ error: 'Ruta inválida' });
+    }
 
     try {
         const entries = fs.readdirSync(target, { withFileTypes: true });
         let folders = [];
         let images = [];
-
-        const isRoot = rel === '';
 
         for (const e of entries) {
             if (e.name === 'node_modules' || e.name === '.git' || e.name === '.next' || e.name === 'dist') continue;
@@ -612,9 +623,41 @@ app.get('/api/browse', (req, res) => {
             }
         }
 
-        res.json({ dir: rel, folders: folders.sort(), images: images.sort() });
+        res.json({ dir: rel, folders: folders.sort(), images: images.sort(), isAbsolute: !!req.query.abs_dir });
     } catch (e) {
         res.status(404).json({ error: 'No se pudo leer: ' + e.message });
+    }
+});
+
+app.get('/api/select-folder', (req, res) => {
+    const psScript = `
+        Add-Type -AssemblyName System.windows.forms
+        $f = New-Object System.Windows.Forms.FolderBrowserDialog
+        $f.Description = "Selecciona la carpeta con tus imágenes"
+        $f.ShowNewFolderButton = $true
+        if ($f.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
+            Write-Output $f.SelectedPath
+        }
+    `;
+    exec(`powershell.exe -NoProfile -Command "${psScript.replace(/\n/g, ';')}"`, (err, stdout) => {
+        const p = stdout.trim();
+        if (p) {
+            res.json({ path: p });
+        } else {
+            res.json({ error: 'Cancelado' });
+        }
+    });
+});
+
+app.get('/api/serve-img', (req, res) => {
+    if (!req.query.path) return res.status(400).send('No path');
+    try {
+        const p = path.resolve(req.query.path);
+        if (!fs.existsSync(p)) return res.status(404).send('Not found');
+        if (!IMG_EXT.has(path.extname(p).toLowerCase())) return res.status(400).send('Not image');
+        res.sendFile(p);
+    } catch(e) {
+        res.status(500).send(e.message);
     }
 });
 
