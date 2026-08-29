@@ -560,20 +560,25 @@ app.get('/api/tts', async (req, res) => {
 
     let tts = null;
     try {
-        tts = await getTtsClient();
+        tts = new MsEdgeTTS();
+        await tts.setMetadata(TTS_VOICE, OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3, {});
         const { audioStream } = tts.toStream(text);
 
         res.set('Content-Type', 'audio/mpeg');
         res.set('Cache-Control', 'no-cache');
 
-        audioStream.on('data', (chunk) => res.write(chunk));
-        audioStream.on('close', () => {
-            res.end();
+        audioStream.pipe(res);
+
+        audioStream.on('end', () => {
             if (tts && typeof tts.close === 'function') tts.close();
         });
+
+        res.on('close', () => {
+            if (tts && typeof tts.close === 'function') tts.close();
+        });
+
         audioStream.on('error', (e) => {
             console.error('TTS stream error:', e.message);
-            res.end();
             if (tts && typeof tts.close === 'function') tts.close();
         });
     } catch (e) {
