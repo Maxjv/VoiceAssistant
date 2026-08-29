@@ -1,76 +1,50 @@
-# TFTE Voice Assistant — Guía de uso
+# TFTE Voice Assistant — Guía de Uso
 
-Última actualización: 2026-08-11
+Última actualización: 2026-08-29
 
 ## Qué es
 
-Una app para entrar a TFTE desde el iPad (o cualquier dispositivo) sin estar en la misma red que la PC, y además hablarle o escribirle a un asistente que puede responderte, o directamente meterse en el código a hacer cambios reales si se lo pedís.
+Una aplicación revolucionaria para desarrollar y controlar tu proyecto desde el iPad (o cualquier dispositivo móvil) sin estar en la misma red que la PC. Te permite dictar o escribir instrucciones para que un Agente Inteligente las ejecute sobre el código de tu proyecto real, además de ofrecerte un entorno visual para diseñar componentes.
 
-## Cómo entrar
+## 1. Instalación, Prueba Gratuita y Suscripción
 
-Abrí la URL que te pasen (cambia cada vez que se reinicia el túnel — pedila si no la tenés a mano). Vas a ver tres partes:
+1. **Prueba Gratis de 7 Días:** Al instalar el programa y ejecutarlo por primera vez en tu computadora, el sistema registra la huella digital única de tu hardware (HWID) y te otorga 7 días de acceso total sin costo.
+2. **Expiración:** Pasados los 7 días, si intentas pedirle algo al asistente, te responderá que la licencia ha expirado. **Copiar la carpeta a otra PC no sirve**, ya que el hardware será distinto y el HWID cambiará, bloqueando el acceso.
+3. **Suscripción Pro:** Cuando adquieras la licencia definitiva, el administrador del software agregará tu HWID a la base de datos maestra en la nube (Supabase).
+4. **Activación Automática:** No necesitas meter ninguna clave. Apenas abras el Asistente de nuevo, se conectará a la nube, verá que tu HWID es VIP, y se desbloqueará de forma permanente al instante.
 
-- **Arriba/centro**: la app que estés viendo (el mockup de Control, la app real de TFTE, o la galería de imágenes).
-- **Abajo**: una franja con botones.
-- **Abajo a la derecha**: un robot, un micrófono grande, y un teclado — todos flotantes, siempre visibles.
+## 2. Cómo Entrar desde tu iPad
 
-## La franja de abajo
+1. Tras encender la PC e iniciar el software, recibirás automáticamente un **correo electrónico** con un enlace temporal seguro de Cloudflare (ej. `https://palabras-al-azar.trycloudflare.com`).
+2. Toca ese enlace desde tu iPad.
+3. Verás la interfaz dividida en:
+   - **Arriba:** El lienzo principal (Tablero de Control, tu aplicación React o la Galería).
+   - **Abajo:** Barra inferior con la cola de **Próximas Tareas** y botones de acceso rápido.
+   - **Flotante:** Botón del micrófono azul y acceso al Agente (robot).
 
-| Botón | Qué hace |
-|---|---|
-| **TFTE** (logo, arriba a la izquierda) | Solo decorativo, no hace nada. |
-| **Control** | Muestra el mockup HTML de referencia del proyecto. |
-| **TFTE** | Muestra la app real de TFTE (la de React), como si estuvieras en la compu. |
-| **Imgs** | Galería navegable de las imágenes de referencia (`FrontImgs`) — carpetas y miniaturas, con lightbox al tocar una imagen. |
-| 🔍➖ / **100%** / 🔍➕ | Zoom de la caja de arriba. Si algo se ve amontonado o no entra en la pantalla, achicá con el botón `-`. Queda guardado para la próxima vez que entres. |
-| 💾 (guardar) | Solo tiene efecto en la vista "Control": activa el auto-guardado de ese documento. |
-| 🔄 (recargar) | Recarga la vista actual. |
-| ⛶ (pantalla completa) | Oculta las barras del navegador. |
+## 3. Tablero de Control y Tareas (Nuevo)
 
-## Hablarle al asistente (botón azul del micrófono)
+Al presionar el botón **Control**, accederás a un constructor visual de tu aplicación:
+1. **La Paleta Izquierda:** Encontrarás componentes como *Screen*, *Card*, *Modal*, etc. Arrástralos hacia el lienzo del medio.
+2. **Dictado y Guardado Mágico:** Cada tarjeta que arrastres tiene una cajita para escribir una instrucción. Puedes tocar el mini-micrófono adentro de la tarjeta para dictarla. **No hay botón de guardar:** apenas tocas afuera de la caja, todo se guarda solo en tu disco duro.
+3. **La Cola de Tareas:** Si prestas atención a la barra inferior ("Próximas Tareas"), verás que cada instrucción que escribiste en el lienzo mágico aparece listada abajo automáticamente.
+4. **Ejecutar Tareas:** Toca el botón azul de "Enviar" al lado de una tarea para que el asistente de IA se ponga a programar esa instrucción por ti.
 
-1. Tocá el micrófono.
-2. Hablá normal. Vas a ver el texto apareciendo en un cartel abajo a medida que te va escuchando.
-3. Cuando dejes de hablar unos segundos, se corta solo y te contesta — en texto (el mismo cartel) y en voz.
-4. Si te arrepentís a mitad de camino, tocá el micrófono de nuevo para cancelar sin mandar nada.
+## 4. Hablarle al Asistente (Botón azul)
 
-**Si la transcripción de voz falla seguido** (te entiende mal, corta antes de tiempo), usá el teclado en vez de pelearte con el micrófono — es más confiable.
+1. Toca el micrófono azul grande y habla normalmente.
+2. Un algoritmo inteligente filtrará tus pausas. Si dejas de hablar por 2 segundos, cortará solo.
+3. Tu voz se transcribe de forma ultra-precisa usando Whisper. Durante 3.5 segundos verás un cartel amarillo con tu texto y una **X roja**.
+4. Si Whisper entendió mal o te arrepentiste, toca la X roja antes de que acabe el tiempo y se cancela. Si dejas que el tiempo pase, la orden viaja directo al código de tu programa.
+5. El asistente te responderá *con voz humana* al terminar.
 
-## Escribir en vez de hablar (botón del teclado)
+## 5. Modo Agente (El Robot Constructor)
 
-1. Tocá el ícono del teclado (al lado del micrófono).
-2. Se abre un panel con un campo de texto y, arriba, un campo opcional de "Carpeta".
-3. Escribí tu mensaje y tocá el botón de enviar (o Enter).
+A diferencia del micrófono rápido, el **Modo Agente** enciende un ingeniero de software real (Gemini o Claude) que entra a los archivos de tu proyecto y los modifica:
 
-**El campo "Carpeta"** solo importa si tenés activado el Modo Agente (ver abajo): le decís al agente que se limite a trabajar en una carpeta puntual en vez de revisar todo el proyecto — por ejemplo `src/interface/apps/2mog/subapps`. Dejalo vacío para que trabaje sobre todo `C:\TFTE` como siempre.
+1. **Seguridad y Confirmación:** Si el Agente necesita modificar, borrar o crear un archivo, **siempre se va a pausar**. Te dirá: "Voy a modificar app.js para poner el botón rojo, ¿procedo?". Debes tocar el micrófono y decirle "Dale", "Sí", o escribirlo en el teclado para que te obedezca.
+2. **A prueba de fallos:** Mientras el Agente "piensa" (puede tardar un minuto revisando archivos), puedes apagar la pantalla del iPad. El servidor en tu PC seguirá trabajando y te mostrará el resultado cuando vuelvas a entrar.
 
-**Podés mandar varios mensajes seguidos** (por voz o por texto, mezclados) sin esperar a que responda el anterior — se van a ir procesando y contestando uno por uno, en el orden en que los mandaste. No hace falta esperar.
+## 6. GitHub en Piloto Automático
 
-## Modo Agente (el robot)
-
-Esto es distinto al micrófono/teclado normal: en vez de un asistente rápido que solo puede leer y responder, prende un **agente de código real** (Claude o Gemini) que puede **modificar archivos de tu proyecto de verdad**.
-
-- **Tocar** el robot: prende o apaga el Modo Agente.
-- **Mantener presionado**: elegís si le hablás a Claude o a Gemini.
-
-Cuando está activo, todo lo que hables o escribas va al agente, con este flujo:
-
-1. Le pedís algo ("cambiame el color de tal botón", "agregame una carpeta con...", lo que sea).
-2. El agente **primero explora tu proyecto para entender el pedido** — esto puede tardar bastante (segundos, a veces más de un minuto), no es instantáneo como el chat rápido.
-3. Te explica en 1-2 oraciones qué entendió y te pregunta si lo hace.
-4. Si le decís algo tipo "dale", "sí", "hacelo" → ejecuta el cambio de verdad.
-5. Si le decís "no", "cancelá", "esperá" → no hace nada.
-6. Si decís cualquier otra cosa que no sea ni sí ni no, lo toma como un pedido nuevo (descarta el anterior).
-
-**Importante:** mientras el agente está pensando o ejecutando, podés cerrar la app o que se corte la conexión sin miedo — la respuesta te va a estar esperando la próxima vez que entres, no se pierde.
-
-## Galería de imágenes (botón "Imgs")
-
-Navegá las carpetas de `FrontImgs` como en un explorador de archivos, con miniaturas. Tocá una imagen para verla en grande; tocá afuera para cerrar.
-
-## Problemas comunes
-
-- **"No me entiende nada" hablando**: probá el teclado en vez del micrófono.
-- **Algo se ve amontonado o cortado**: bajá el zoom con el botón `-`.
-- **El robot no contesta nunca**: puede estar pensando (tarda de verdad en Modo Agente) — fijate el cartel de estado abajo, dice "pensando" o "ejecutando cambios" mientras trabaja.
-- **La URL dejó de andar**: seguramente se reinició la PC o el túnel — pedí la URL nueva.
+En la barra de herramientas verás un ícono de una nube de GitHub. Si marcas la casilla "Auto", el sistema vigilará tu proyecto. Cuando termines de guardar cambios y dejes el teclado quieto por 10 segundos, el sistema subirá automáticamente una copia de seguridad perfecta a tu repositorio privado.

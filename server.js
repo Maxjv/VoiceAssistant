@@ -19,6 +19,17 @@ const TTS_VOICE = 'es-AR-ElenaNeural';
 const app = express();
 const port = process.env.PORT || 4000;
 
+// CORS para todo
+app.use(cors({
+    origin: '*',
+    methods: ['GET', 'POST', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Private-Network', 'true');
+    next();
+});
+
 // --- INICIO MIDDLEWARE DE SEGURIDAD MODERNO (Con pantalla de Login visual) ---
 const ACCESS_PIN = process.env.ACCESS_PIN || '1234';
 
@@ -50,7 +61,9 @@ app.post('/api/login', (req, res) => {
 });
 
 app.use((req, res, next) => {
-    if (req.path === '/api/login') return next();
+    // Exenciones de seguridad absolutas para evitar fallos de fetch sin cookies
+    const exempted = ['/api/login', '/api/save-next-steps', '/api/control/save', '/api/tasks/pending'];
+    if (exempted.includes(req.path)) return next();
 
     const cookies = parseCookies(req);
     if (cookies.tfte_session === ACCESS_PIN) {
@@ -247,25 +260,30 @@ async function getLicenseStatus() {
 
     // Validación externa contra Base de Datos Central
     try {
-        const LICENSE_SERVER_URL = process.env.LICENSE_SERVER_URL || 'http://localhost:3000/api/license/verify';
-        const res = await fetch(LICENSE_SERVER_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ hwid: hwId })
-        });
-        const serverStatus = await res.json();
-        
-        if (serverStatus.valid) {
-            data.isPro = true;
-            fs.writeFileSync(LICENSE_FILE, JSON.stringify(data, null, 2), 'utf8');
-            cachedLicenseStatus = { status: 'pro', daysLeft: 0, isPro: true, message: serverStatus.message };
-            lastLicenseCheck = Date.now();
-            return cachedLicenseStatus;
-        } else {
-            // Si el servidor dice que no es válida, revocamos
-            if (data.isPro) {
-                data.isPro = false;
+        const supabaseUrl = process.env.SUPABASE_URL;
+        const supabaseKey = process.env.SUPABASE_ANON_KEY;
+
+        if (supabaseUrl && supabaseKey) {
+            const res = await fetch(`${supabaseUrl}/rest/v1/licenses?hwid=eq.${hwId}&select=is_active`, {
+                headers: {
+                    'apikey': supabaseKey,
+                    'Authorization': `Bearer ${supabaseKey}`
+                }
+            });
+            const sbData = await res.json();
+
+            if (Array.isArray(sbData) && sbData.length > 0 && sbData[0].is_active === true) {
+                data.isPro = true;
                 fs.writeFileSync(LICENSE_FILE, JSON.stringify(data, null, 2), 'utf8');
+                cachedLicenseStatus = { status: 'pro', daysLeft: 0, isPro: true, message: "Licencia verificada online" };
+                lastLicenseCheck = Date.now();
+                return cachedLicenseStatus;
+            } else {
+                // Si el servidor dice que no es válida o no existe, revocamos
+                if (data.isPro) {
+                    data.isPro = false;
+                    fs.writeFileSync(LICENSE_FILE, JSON.stringify(data, null, 2), 'utf8');
+                }
             }
         }
     } catch (e) {
@@ -287,7 +305,7 @@ async function getLicenseStatus() {
             cachedLicenseStatus = { status: 'active', daysLeft, isPro: false };
         }
     }
-    
+
     lastLicenseCheck = Date.now();
     return cachedLicenseStatus;
 }
@@ -362,7 +380,7 @@ app.get('/', (req, res) => {
 });
 
 app.get('/api/get-context', (req, res) => {
-    res.json({ 
+    res.json({
         contextPath: ROOT_DIR,
         projectName: process.env.PROJECT_NAME || 'React App'
     });
@@ -452,7 +470,7 @@ app.post('/api/control/create', (req, res) => {
     try {
         const controlPath = path.join(BASE_DIR, CONTROL_FILENAME);
         const templatePath = path.join(__dirname, 'public', 'Control_Template.html');
-        
+
         let templateHtml = '';
         if (fs.existsSync(templatePath)) {
             templateHtml = fs.readFileSync(templatePath, 'utf-8');
@@ -463,7 +481,7 @@ app.post('/api/control/create', (req, res) => {
         if (!fs.existsSync(controlPath)) {
             fs.writeFileSync(controlPath, templateHtml, 'utf-8');
         }
-        
+
         res.json({ ok: true, url: `/control-board` });
     } catch (e) {
         res.status(500).json({ error: e.message });
@@ -473,10 +491,17 @@ app.post('/api/control/create', (req, res) => {
 app.post('/api/control/save', express.json(), (req, res) => {
     try {
         const controlPath = path.join(BASE_DIR, CONTROL_FILENAME);
+        console.log("-> /api/control/save RECEIVED DATA:", JSON.stringify(req.body.data));
         if (fs.existsSync(controlPath)) {
             let content = fs.readFileSync(controlPath, 'utf-8');
             const dataStr = JSON.stringify(req.body.data || [], null, 2);
-            content = content.replace(/let\s+controlData\s*=\s*\[[\s\S]*?\]\s*;/m, `let controlData = ${dataStr};`);
+            const originalContent = content;
+            content = content.replace(/let\s+controlData\s*=\s*[\s\S]*?\/\*\s*__DATA_INJECTION_POINT__\s*\*\//, `let controlData = ${dataStr};\n/* __DATA_INJECTION_POINT__ */`);
+            if (content === originalContent) {
+                console.log("-> REGEX REPLACE FAILED! No changes made.");
+            } else {
+                console.log("-> REGEX REPLACE SUCCESS! Writing to file...");
+            }
             fs.writeFileSync(controlPath, content, 'utf-8');
             res.json({ ok: true });
         } else {
@@ -493,18 +518,38 @@ app.get('/api/check-control', (req, res) => {
 
 app.get('/control-board', (req, res) => {
     const controlPath = path.join(BASE_DIR, CONTROL_FILENAME);
-    if (fs.existsSync(controlPath)) {
-        res.sendFile(controlPath);
+    const templatePath = path.join(__dirname, 'public', 'Control_Template.html');
+
+    if (fs.existsSync(controlPath) && fs.existsSync(templatePath)) {
+        try {
+            // Leer el template siempre fresco
+            let templateContent = fs.readFileSync(templatePath, 'utf-8');
+
+            // Leer los datos del usuario
+            const userContent = fs.readFileSync(controlPath, 'utf-8');
+            const dataMatch = userContent.match(/let\s+controlData\s*=\s*([\s\S]*?)\/\*\s*__DATA_INJECTION_POINT__\s*\*\//);
+
+            if (dataMatch) {
+                // Inyectar los datos en el template fresco
+                templateContent = templateContent.replace(
+                    /\/\*\s*__DATA_INJECTION_POINT__\s*\*\//,
+                    `controlData = ${dataMatch[1]}/* __DATA_INJECTION_POINT__ */`
+                );
+            }
+
+            res.send(templateContent);
+        } catch (e) {
+            res.status(500).send('Error generando control board: ' + e.message);
+        }
     } else {
-        res.status(404).send('No se ha creado el entorno de control.');
+        res.status(404).send('No se ha creado el entorno de control o falta el template.');
     }
 });
 
 // -----------------------------------
 
-let ttsClient = null;
 async function getTtsClient() {
-    if (!ttsClient) ttsClient = new MsEdgeTTS();
+    const ttsClient = new MsEdgeTTS();
     await ttsClient.setMetadata(TTS_VOICE, OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3, {});
     return ttsClient;
 }
@@ -513,22 +558,28 @@ app.get('/api/tts', async (req, res) => {
     const text = req.query.text;
     if (!text) return res.status(400).send('No text');
 
+    let tts = null;
     try {
-        const tts = await getTtsClient();
+        tts = await getTtsClient();
         const { audioStream } = tts.toStream(text);
 
         res.set('Content-Type', 'audio/mpeg');
         res.set('Cache-Control', 'no-cache');
 
         audioStream.on('data', (chunk) => res.write(chunk));
-        audioStream.on('close', () => res.end());
+        audioStream.on('close', () => {
+            res.end();
+            if (tts && typeof tts.close === 'function') tts.close();
+        });
         audioStream.on('error', (e) => {
             console.error('TTS stream error:', e.message);
             res.end();
+            if (tts && typeof tts.close === 'function') tts.close();
         });
     } catch (e) {
         console.error('TTS error:', e.message);
         res.status(500).send('TTS error');
+        if (tts && typeof tts.close === 'function') tts.close();
     }
 });
 
@@ -543,19 +594,19 @@ app.get('/api/browse', (req, res) => {
         const entries = fs.readdirSync(target, { withFileTypes: true });
         let folders = [];
         let images = [];
-        
+
         const isRoot = rel === '';
-        
+
         for (const e of entries) {
             if (e.name === 'node_modules' || e.name === '.git' || e.name === '.next' || e.name === 'dist') continue;
-            
+
             if (e.isDirectory()) {
                 folders.push(e.name);
             } else if (e.isFile() && IMG_EXT.has(path.extname(e.name).toLowerCase())) {
                 images.push(e.name);
             }
         }
-        
+
         res.json({ dir: rel, folders: folders.sort(), images: images.sort() });
     } catch (e) {
         res.status(404).json({ error: 'No se pudo leer: ' + e.message });
@@ -778,7 +829,7 @@ app.get('/api/agente/plan', (req, res) => {
         // 1. Buscar en ROOT_DIR/.brain (Contexto local del proyecto)
         const localBrainDirs = [
             path.join(ROOT_DIR, '.brain'),
-            path.join(BASE_DIR, '.brain') // Fallback al directorio de instalación (AppData)
+            path.join(BASE_DIR, '.brain') // Fallback al directorio de instalación
         ];
 
         for (const localBrainDir of localBrainDirs) {
@@ -849,42 +900,80 @@ app.get('/api/agente/tareas', (req, res) => {
 
 app.get('/api/tasks/pending', (req, res) => {
     try {
-        const PROJECT_ROOT = process.env.PROJECT_ROOT || 'C:\\TFTE';
-        const filePath = path.join(PROJECT_ROOT, 'TFTE Next Steps MainApp 2.html');
-        if (!fs.existsSync(filePath)) return res.json([]);
-
-        const content = fs.readFileSync(filePath, 'utf-8');
-        // Regex a prueba de balas: busca let data = [...] hasta el punto y coma final
-        const match = content.match(/let\s+data\s*=\s*(\[[\s\S]*?\])\s*;/);
-
-        if (!match) return res.json([]);
-
-        const data = JSON.parse(match[1]);
         const pending = [];
+        const planPath = 'C:\\TFTE\\VoiceAssistant\\VoiceAssistant_Plan.html';
 
-        data.forEach(sub => {
-            const subAppName = sub.subApp || 'General';
-            if (sub.fields) {
-                Object.keys(sub.fields).forEach(fieldKey => {
-                    const field = sub.fields[fieldKey];
-                    if (field && field.items) {
-                        field.items.forEach(item => {
-                            const st = (item.status || '').toLowerCase();
-                            if (st.includes('pendiente') || st.includes('proceso') || st.includes('proximo')) {
-                                if (item.text && item.text.trim() && item.text.trim() !== 'OK' && item.text.trim() !== '-') {
-                                    pending.push({
-                                        subApp: subAppName,
-                                        field: fieldKey,
-                                        status: item.status,
-                                        text: item.text
+        if (fs.existsSync(planPath)) {
+            try {
+                const content = fs.readFileSync(planPath, 'utf-8');
+                const match = content.match(/let\s+data\s*=\s*([\s\S]*?)\/\*\s*__DATA_INJECTION_POINT__\s*\*\//);
+                if (match) {
+                    let jsonStr = match[1].trim();
+                    if (jsonStr.endsWith(';')) jsonStr = jsonStr.slice(0, -1);
+                    const data = JSON.parse(jsonStr);
+                    data.forEach(sub => {
+                        const subAppName = sub.subApp || 'General';
+                        if (sub.fields) {
+                            Object.keys(sub.fields).forEach(fieldKey => {
+                                const field = sub.fields[fieldKey];
+                                if (field && field.items) {
+                                    field.items.forEach(item => {
+                                        const st = (item.status || '').toLowerCase();
+                                        if (st.includes('pendiente') || st.includes('proceso') || st.includes('proximo')) {
+                                            if (item.text && item.text.trim() && item.text.trim() !== 'OK' && item.text.trim() !== '-') {
+                                                pending.push({
+                                                    subApp: subAppName,
+                                                    field: fieldKey,
+                                                    status: item.status,
+                                                    text: item.text
+                                                });
+                                            }
+                                        }
                                     });
                                 }
+                            });
+                        }
+                    });
+                }
+            } catch (err) {
+                console.error("Error parseando VoiceAssistant_Plan.html", err);
+            }
+        }
+
+        // Novedad: Extraer tareas del nuevo Control Board
+        const controlPath = path.join(BASE_DIR, CONTROL_FILENAME);
+        if (fs.existsSync(controlPath)) {
+            const controlContent = fs.readFileSync(controlPath, 'utf-8');
+            const controlMatch = controlContent.match(/let\s+controlData\s*=\s*([\s\S]*?)\/\*\s*__DATA_INJECTION_POINT__\s*\*\//);
+            if (controlMatch) {
+                try {
+                    let jsonString = controlMatch[1].trim();
+                    if (jsonString.endsWith(';')) {
+                        jsonString = jsonString.slice(0, -1);
+                    }
+                    const cData = JSON.parse(jsonString);
+                    function extractTasks(nodes, pathStr) {
+                        nodes.forEach(node => {
+                            const currentPath = pathStr ? `${pathStr} > ${node.title}` : node.title;
+                            if (node.instruction && node.instruction.trim() !== '') {
+                                pending.push({
+                                    subApp: 'Control Board',
+                                    field: currentPath,
+                                    status: 'Pendiente',
+                                    text: node.instruction
+                                });
+                            }
+                            if (node.children && node.children.length > 0) {
+                                extractTasks(node.children, currentPath);
                             }
                         });
                     }
-                });
+                    extractTasks(cData, '');
+                } catch (e) {
+                    console.error("Error parseando Project_Control:", e);
+                }
             }
-        });
+        }
         res.json(pending);
     } catch (e) {
         console.error("Error loading pending tasks:", e);
@@ -1083,7 +1172,7 @@ try {
 try {
     const urlFilePath = path.join(BASE_DIR, 'current-url.txt');
     let lastKnownUrl = '';
-    
+
     if (fs.existsSync(urlFilePath)) {
         lastKnownUrl = fs.readFileSync(urlFilePath, 'utf-8').trim();
     }
@@ -1091,12 +1180,12 @@ try {
     setInterval(async () => {
         try {
             if (!fs.existsSync(urlFilePath)) return;
-            
+
             const newUrl = fs.readFileSync(urlFilePath, 'utf-8').trim();
             if (newUrl && newUrl !== lastKnownUrl) {
                 lastKnownUrl = newUrl;
                 console.log(`[Sistema] Nueva URL detectada: ${newUrl}. Preparando correo...`);
-                
+
                 const targetEmail = process.env.USER_EMAIL || process.env.NOTIFY_EMAIL;
                 if (!targetEmail) {
                     console.log("[Sistema] No se configuró USER_EMAIL en .env. Omitiendo envío de correo.");

@@ -577,18 +577,20 @@ let globalMicStream = null;
 // ==========================================
 // NUEVA UX: MODAL INTERACTIVO DE AUTENTICACIÓN
 // ==========================================
-function mostrarModalCreditos(proveedor) {
+function mostrarModalCreditos(proveedor, showQuota = false) {
     const modal = document.getElementById('modal-creditos');
     if (!modal) return;
 
-    // Reiniciar vista al paso 1
+    // Reiniciar vista al paso 1 o al paso Quota
     const step1 = document.getElementById('modal-step-1');
     const stepYes = document.getElementById('modal-step-yes');
     const stepNo = document.getElementById('modal-step-no');
+    const stepQuota = document.getElementById('modal-step-quota');
 
-    if (step1) step1.style.display = 'block';
+    if (step1) step1.style.display = showQuota ? 'none' : 'block';
     if (stepYes) stepYes.style.display = 'none';
     if (stepNo) stepNo.style.display = 'none';
+    if (stepQuota) stepQuota.style.display = showQuota ? 'block' : 'none';
 
     // Dinamizar texto según agente
     let agentName = 'Claude';
@@ -623,6 +625,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnCerrar1 = document.getElementById('btn-cerrar-modal-1');
     const btnCerrar2 = document.getElementById('btn-cerrar-modal-2');
     const btnCerrar3 = document.getElementById('btn-cerrar-modal-3');
+    const btnCerrarQuota = document.getElementById('btn-cerrar-modal-quota');
     const modal = document.getElementById('modal-creditos');
 
     if (btnAuthYes) btnAuthYes.onclick = () => {
@@ -645,6 +648,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnCerrar1) btnCerrar1.onclick = cerrarModal;
     if (btnCerrar2) btnCerrar2.onclick = cerrarModal;
     if (btnCerrar3) btnCerrar3.onclick = cerrarModal;
+    if (btnCerrarQuota) btnCerrarQuota.onclick = cerrarModal;
 
     const sendToastBtn = document.getElementById('sendToastBtn');
     const responseToast = document.getElementById('responseToast');
@@ -1253,7 +1257,8 @@ function pollAgente() {
                     clearInterval(agentPolling);
                     agentPolling = null;
                     updateUIState('ready');
-                    mostrarModalCreditos(agentBackend); // Dispara tu popup elegante
+                    const isQuota = respLower.includes('quota reached');
+                    mostrarModalCreditos(agentBackend, isQuota); // Dispara tu popup elegante
 
                     // Limpiamos memoria para liberar el bucle
                     lastAgentResponse = '';
@@ -2316,6 +2321,14 @@ if (initialBar && !initialBar.classList.contains('hidden')) {
 // ==========================================
 // LÓGICA DE GIT SYNC (MANUAL Y CREACIÓN DE REPO)
 // ==========================================
+window.addEventListener('message', (e) => {
+    if (e.data && e.data.type === 'CONTROL_SAVED') {
+        if (typeof fetchPendingTasks === 'function') {
+            fetchPendingTasks();
+        }
+    }
+});
+
 const gitSyncBtn = document.getElementById('gitSyncBtn');
 const gitSyncIcon = document.getElementById('gitSyncIcon');
 

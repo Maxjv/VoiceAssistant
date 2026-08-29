@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 
 <head>
@@ -18,21 +18,16 @@
         <!-- BARRA DE TAREAS PENDIENTES -->
         <div id="pendingTasksBar" class="pending-tasks-bar hidden">
             <div class="pending-tasks-header" onclick="togglePendingTasks()">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <span>PrÃ³ximas Tareas (Control)</span>
-                    <span id="queueCountBadge"
-                        style="display: none; background: #0284c7; color: white; font-size: 0.65rem; font-weight: 700; padding: 1px 7px; border-radius: 999px; letter-spacing: 0.02em;">0
-                        en cola</span>
-                </div>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <span id="queueActiveIndicator"
-                        style="display: none; color: #38bdf8; font-size: 0.72rem; align-items: center; gap: 4px; font-weight: 600;">
-                        <span class="material-icons-round"
-                            style="font-size: 0.9rem; animation: spin 2s linear infinite;">sync</span> Procesando cola
-                    </span>
-                    <span class="material-icons-round" id="pendingTasksIcon">expand_less</span>
-                </div>
+                <span id="queueCountBadge"
+                    style="display: none; background: #0284c7; color: white; font-size: 0.65rem; font-weight: 700; padding: 1px 7px; border-radius: 999px; letter-spacing: 0.02em; position: absolute; top: -8px; right: -15px;">0</span>
+                <span id="queueActiveIndicator"
+                    style="display: none; color: #38bdf8; font-size: 0.72rem; position: absolute; left: -25px;">
+                    <span class="material-icons-round"
+                        style="font-size: 0.9rem; animation: spin 2s linear infinite;">sync</span>
+                </span>
+                <span class="material-icons-round" id="pendingTasksIcon">expand_less</span>
             </div>
+
             <!-- BANNER DE ESTADO DE LA COLA -->
             <div id="queueStatusBanner"
                 style="display: none; background: rgba(2, 132, 199, 0.12); border-bottom: 1px solid rgba(56, 189, 248, 0.18); padding: 6px 14px; font-size: 0.73rem; color: #7dd3fc; justify-content: space-between; align-items: center;">
@@ -124,13 +119,13 @@
             </div>
         </aside>
 
-        <main class="main-content" style="position: relative;">
+        <main class="main-content" style="position: relative; background-color: #0f172a;">
             <iframe id="iframeReact" class="app-iframe" src="/react" frameborder="0"
-                style="width: 100%; height: 100%;"></iframe>
+                style="width: 100%; height: 100%; background-color: #0f172a;"></iframe>
             <iframe id="iframeHtml" class="app-iframe" src="/control-board" frameborder="0"
                 style="width: 100%; height: 100%; opacity: 0; pointer-events: none; z-index: -1;"></iframe>
             <iframe id="iframePlan" class="app-iframe" src="/plan.html" frameborder="0"
-                style="width: 100%; height: 100%; opacity: 0; pointer-events: none; z-index: -1;"></iframe>
+                style="width: 100%; height: 100%; opacity: 0; pointer-events: none; z-index: -1; background-color: #0f172a;"></iframe>
             <iframe id="iframeImgs" class="app-iframe" src="/gallery.html" frameborder="0"
                 style="width: 100%; height: 100%; opacity: 0; pointer-events: none; z-index: -1;"></iframe>
         </main>
@@ -226,7 +221,7 @@
                     style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <span class="material-icons-round" style="color: #38bdf8; font-size: 1.3rem;">tune</span>
-                        <h2 style="font-size: 1.15rem; margin: 0; color: #f8fafc; font-weight: 700;">GestiÃ³n de
+                        <h2 style="font-size: 1.15rem; margin: 0; color: #f8fafc; font-weight: 700;">Gestión de
                             Contextos</h2>
                         <div id="contextStatusLabel"
                             style="font-size: 0.68rem; color: #38bdf8; padding: 2px 8px; background: rgba(56, 189, 248, 0.12); border-radius: 999px; border: 1px solid rgba(56,189,248,0.25); font-weight: 600;">
@@ -243,7 +238,7 @@
                     style="background: rgba(56, 189, 248, 0.06); border: 1px solid rgba(56, 189, 248, 0.18); color: #bae6fd; padding: 10px 14px; margin-bottom: 16px; border-radius: 10px; font-size: 0.78rem; line-height: 1.45;">
                     <strong style="display: flex; align-items: center; gap: 5px; color: #38bdf8; margin-bottom: 3px;">
                         <span class="material-icons-round" style="font-size: 0.95rem;">lightbulb</span> Tip de
-                        AutenticaciÃ³n
+                        Autenticación
                     </strong>
                     Si el asistente no responde, ejecuta <code
                         style="background: rgba(0,0,0,0.3); padding: 1px 5px; border-radius: 4px; color: #38bdf8; font-family: monospace;">agy</code>
@@ -280,13 +275,13 @@
                 </div>
 
                 <div class="startup-input-group">
-                    <label>AÃ±adir Nuevo Contexto</label>
+                    <label>Añadir Nuevo Contexto</label>
                     <div style="display: flex; gap: 8px; margin-bottom: 18px;">
                         <input type="text" id="newContextFolder" placeholder="Ej: C:\TFTE\VoiceAssistant"
                             style="flex: 1;">
                         <button id="addContextBtn"
                             style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); padding: 0 14px; border-radius: 8px; cursor: pointer; font-size: 0.8rem; font-weight: 600; white-space: nowrap; display: flex; align-items: center; gap: 4px; transition: all 0.2s;">
-                            <span class="material-icons-round" style="font-size: 0.95rem;">add</span> AÃ±adir
+                            <span class="material-icons-round" style="font-size: 0.95rem;">add</span> Añadir
                         </button>
                     </div>
 
@@ -298,15 +293,14 @@
             </div>
         </div>
 
-        <!-- MODAL INTERACTIVO DE LOGIN VS CRÃ‰DITOS (AQUÃ ESTÃ LA NUEVA UX) -->
+        <!-- MODAL INTERACTIVO DE LOGIN VS CRÉDITOS (AQUÍ ESTÁ LA NUEVA UX) -->
         <div id="modal-creditos" class="modal-oculto">
             <!-- Paso 1: Preguntar -->
             <div class="modal-contenido" id="modal-step-1">
-                <h2 id="modal-titulo">âš ï¸ Falla de ConexiÃ³n con IA</h2>
-                <p>El agente <strong id="modal-agent-name" style="color: #38bdf8;"></strong> no responde a la validaciÃ³n
-                    de contexto. Â¿Ya has iniciado sesiÃ³n en la terminal de tu PC?</p>
+                <h2 id="modal-titulo">⚠️ Falla de Conexión con IA</h2>
+                <p>El agente <strong id="modal-agent-name" style="color: #38bdf8;"></strong> no responde a la validación de contexto. ¿Ya has iniciado sesión en la terminal de tu PC?</p>
                 <div class="modal-botones">
-                    <button id="btn-auth-yes" class="btn-primario" style="background: #eab308; color:#000;">SÃ­, ya estoy
+                    <button id="btn-auth-yes" class="btn-primario" style="background: #eab308; color:#000;">Sí, ya estoy
                         logueado</button>
                     <button id="btn-auth-no" class="btn-secundario" style="background: #38bdf8; color:#0f172a;">No / No
                         estoy seguro</button>
@@ -316,10 +310,10 @@
                     volver</button>
             </div>
 
-            <!-- Paso 2 (Si responde SÃ): No tiene crÃ©ditos -->
+            <!-- Paso 2 (Si responde Sí): No tiene créditos -->
             <div class="modal-contenido" id="modal-step-yes" style="display:none;">
-                <h2>ðŸª™ Sin CrÃ©ditos en la IA</h2>
-                <p>Si ya estÃ¡s logueado y sigue fallando, significa que tu cuota de la API se ha agotado. Necesitas
+                <h2>🪙 Sin Créditos en la IA</h2>
+                <p>Si ya estás logueado y sigue fallando, significa que tu cuota de la API se ha agotado. Necesitas
                     recargar saldo (tokens) en la consola web para usar el Modo Agente.</p>
                 <div class="modal-botones">
                     <button id="btn-login-ia" class="btn-primario">Ir a recargar saldo</button>
@@ -327,15 +321,24 @@
                 </div>
             </div>
 
-            <!-- Paso 3 (Si responde NO): Instrucciones de login -->
+            <!-- Paso 3: Límite de Cuota Alcanzado -->
+            <div class="modal-contenido" id="modal-step-quota" style="display:none;">
+                <h2 style="color: #ef4444;">⏳ Límite de Cuota Alcanzado</h2>
+                <p>La IA informa que has alcanzado tu límite de cuota (Individual quota reached). Por favor, mejora tu suscripción o espera <strong>45 minutos</strong> para que se restablezca automáticamente.</p>
+                <div class="modal-botones">
+                    <button id="btn-cerrar-modal-quota" class="btn-primario" style="background: #ef4444; color: #fff;">Entendido</button>
+                </div>
+            </div>
+
+            <!-- Paso 4 (Si responde NO): Instrucciones de login -->
             <div class="modal-contenido" id="modal-step-no" style="display:none;">
-                <h2>ðŸ”‘ Requiere Inicio de SesiÃ³n</h2>
+                <h2>🔑 Requiere Inicio de Sesión</h2>
                 <p>Ve a tu PC (Servidor), abre una ventana de consola (CMD o PowerShell) y escribe el siguiente comando:
                 </p>
                 <code id="cmd-instruccion"
                     style="display:block; background:#0f172a; padding:10px; border-radius:6px; color:#38bdf8; font-size:1.2rem; font-weight:bold; margin-bottom:15px; letter-spacing: 1px;">claude login</code>
-                <p style="font-size:0.85rem; color:#94a3b8; margin-bottom:15px;">Una vez completado el inicio de sesiÃ³n
-                    en la web que se abrirÃ¡, vuelve aquÃ­ e intenta de nuevo.</p>
+                <p style="font-size:0.85rem; color:#94a3b8; margin-bottom:15px;">Una vez completado el inicio de sesión
+                    en la web que se abrirá, vuelve aquí e intenta de nuevo.</p>
                 <div class="modal-botones">
                     <button id="btn-cerrar-modal-3" class="btn-primario">Entendido, cerrar</button>
                 </div>
@@ -763,27 +766,32 @@
         }
 
         .pending-tasks-bar.hidden {
-            transform: translate(-50%, calc(100% - 36px));
+            transform: translate(-50%, 100%);
         }
 
         .pending-tasks-header {
-            height: 36px;
+            height: 28px;
+            width: 60px;
+            border-radius: 8px 8px 0 0;
+            background: rgba(15, 23, 42, 0.92);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            padding: 0 16px;
+            justify-content: center;
             cursor: pointer;
-            font-size: 0.82rem;
-            font-weight: 600;
-            color: #f1f5f9;
-            background: rgba(255, 255, 255, 0.04);
-            border-radius: 16px 16px 0 0;
-            user-select: none;
-            transition: background 0.2s;
+            position: absolute;
+            top: -28px;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-bottom: none;
+            color: #94a3b8;
+            transition: color 0.2s;
         }
 
         .pending-tasks-header:hover {
-            background: rgba(255, 255, 255, 0.08);
+            color: #f8fafc;
         }
 
         .pending-tasks-content {

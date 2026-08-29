@@ -9,7 +9,7 @@
     "dev": "start npm start && npm run tunnel",
     "start": "node server.js",
     "tunnel": "node start_tunnel.js",
-    "build": "pkg . --targets node18-win-x64 --output VoiceAssistant_TFTE.exe"
+    "build": "pkg . --targets node18-win-x64 --output dist_production/VoiceAssistant_TFTE.exe"
   },
   "pkg": {
     "assets": [

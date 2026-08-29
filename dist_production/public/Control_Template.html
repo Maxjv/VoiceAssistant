@@ -31,7 +31,7 @@
 
         /* Sidebar / Palette */
         .palette {
-            width: 280px;
+            width: 170px;
             background: var(--bg-panel);
             border-right: 1px solid var(--border);
             display: flex;
@@ -43,7 +43,7 @@
 
         .palette h2 {
             margin: 0 0 20px 0;
-            font-size: 1.2rem;
+            font-size: 1.1rem;
             display: flex;
             align-items: center;
             gap: 10px;
@@ -51,8 +51,10 @@
 
         .palette-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: 1fr;
+            grid-auto-rows: 1fr;
             gap: 10px;
+            flex: 1;
         }
 
         .palette-item {
@@ -158,6 +160,8 @@
             margin-bottom: 15px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
             position: relative;
+            width: 50%; /* A la mitad */
+            min-width: 350px;
         }
 
         .block-header {
@@ -220,8 +224,50 @@
         }
 
         textarea.prop-input {
-            resize: vertical;
-            min-height: 60px;
+            resize: none;
+            overflow: hidden;
+            min-height: 40px;
+            padding-left: 45px;
+        }
+        
+        .inst-wrapper {
+            position: relative;
+            width: 100%;
+            margin-top: 8px;
+        }
+        
+        .mic-btn {
+            position: absolute;
+            left: 8px;
+            bottom: 8px;
+            background: rgba(56, 189, 248, 0.1);
+            color: var(--accent);
+            border: none;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .mic-btn:hover {
+            background: rgba(56, 189, 248, 0.2);
+            transform: scale(1.1);
+        }
+        
+        .mic-btn.recording {
+            background: var(--danger);
+            color: white;
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
         }
 
         /* Nested indents */
@@ -261,8 +307,8 @@
     </div>
 
     <div class="canvas-container">
-        <div class="toolbar">
-            <button class="btn primary" id="btnSave"><span class="material-icons-round">save</span> Guardar Tablero</button>
+        <div class="header-actions">
+            <button class="btn btn-primary hidden" id="btnSave" style="display: none;"><span class="material-icons-round">save</span> Guardar Tablero</button>
         </div>
         <div class="canvas">
             <div class="dropzone" id="mainCanvas">
@@ -347,7 +393,10 @@
             
             const showInstruction = type !== 'screen';
             const instructionHtml = showInstruction 
-                ? `<textarea class="prop-input inst-input" placeholder="Instrucción de la tarea..." rows="2">${config.instruction || ''}</textarea>` 
+                ? `<div class="inst-wrapper">
+                    <textarea class="prop-input inst-input" placeholder="Instrucción de la tarea..." rows="2" oninput="this.style.height = ''; this.style.height = this.scrollHeight + 'px'; autoSaveControl()" onblur="autoSaveControl()">${config.instruction || ''}</textarea>
+                    <button class="mic-btn" title="Dictar instrucción"><span class="material-icons-round" style="font-size: 1.1rem;">mic</span></button>
+                   </div>` 
                 : '';
             
             el.innerHTML = `
@@ -360,7 +409,7 @@
                     </div>
                 </div>
                 <div class="block-content">
-                    <input type="text" class="prop-input name-input" placeholder="Nombre/Etiqueta del ${titleText}" value="${config.title}">
+                    <input type="text" class="prop-input name-input" placeholder="Nombre/Etiqueta del ${titleText}" value="${config.title}" oninput="autoSaveControl()" onblur="autoSaveControl()">
                     ${instructionHtml}
                     ${type !== 'button' && type !== 'filter' ? '<div class="dropzone child-dropzone"></div>' : ''}
                 </div>
@@ -370,6 +419,14 @@
                 e.stopPropagation();
                 draggedElement = el;
                 e.dataTransfer.setData('text/plain', type);
+            });
+
+            // Arreglo para poder seleccionar texto en inputs
+            const inputs = el.querySelectorAll('input, textarea');
+            inputs.forEach(inp => {
+                inp.addEventListener('mousedown', () => el.draggable = false);
+                inp.addEventListener('mouseup', () => el.draggable = true);
+                inp.addEventListener('mouseleave', () => el.draggable = true);
             });
 
             const delBtn = el.querySelector('.delete');
@@ -387,8 +444,8 @@
         }
 
         function updateEmptyMsg() {
+            const hasBlocks = mainCanvas.querySelectorAll('.block').length > 0;
             const msg = mainCanvas.querySelector('.empty-canvas-msg');
-            const hasBlocks = Array.from(mainCanvas.children).some(c => c.classList.contains('block'));
             if (hasBlocks && msg) {
                 msg.style.display = 'none';
             } else if (!hasBlocks && msg) {
@@ -396,6 +453,7 @@
             } else if (!hasBlocks && !msg) {
                 mainCanvas.innerHTML = '<div class="empty-canvas-msg">Arrastra componentes aquí para comenzar a construir tu tablero.</div>';
             }
+            autoSaveControl();
         }
 
         function serializeTree(container) {
@@ -404,10 +462,12 @@
             
             blocks.forEach(b => {
                 const type = b.className.match(/block-type-(\w+)/)[1];
-                const title = b.querySelector('.name-input').value || `Nuevo ${type}`;
-                const instInput = b.querySelector('.inst-input');
+                const contentDiv = b.querySelector(':scope > .block-content');
+                const nameInput = contentDiv ? contentDiv.querySelector(':scope > .name-input') : null;
+                const title = nameInput ? nameInput.value : `Nuevo ${type}`;
+                const instInput = contentDiv ? contentDiv.querySelector(':scope > .inst-wrapper .inst-input') : null;
                 const instruction = instInput ? instInput.value : '';
-                const childDz = b.querySelector('.child-dropzone');
+                const childDz = contentDiv ? contentDiv.querySelector(':scope > .child-dropzone') : null;
                 
                 const node = { type, title, instruction };
                 if (childDz) {
@@ -431,37 +491,115 @@
             });
         }
 
-        document.getElementById('btnSave').addEventListener('click', async () => {
-            const btn = document.getElementById('btnSave');
-            btn.innerHTML = '<span class="material-icons-round">hourglass_empty</span> Guardando...';
-            btn.disabled = true;
-
-            const newData = serializeTree(mainCanvas);
-            
-            try {
-                const res = await fetch('/api/control/save', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ data: newData })
-                });
-                if (res.ok) {
-                    btn.innerHTML = '<span class="material-icons-round">check</span> Guardado';
-                    setTimeout(() => {
-                        btn.innerHTML = '<span class="material-icons-round">save</span> Guardar Tablero';
-                        btn.disabled = false;
-                    }, 2000);
-                } else {
-                    throw new Error('Server error');
+        let saveTimeout;
+        async function autoSaveControl() {
+            clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(async () => {
+                const newData = serializeTree(mainCanvas);
+                try {
+                    await fetch('/api/control/save', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ data: newData })
+                    });
+                    // Avisar al padre (app.js) que se guardó para que recargue la cola de tareas
+                    window.parent.postMessage({ type: 'CONTROL_SAVED' }, '*');
+                } catch (e) {
+                    console.error("Autosave error", e);
                 }
-            } catch (e) {
-                alert("Error al guardar el entorno de control.");
-                btn.innerHTML = '<span class="material-icons-round">save</span> Guardar Tablero';
-                btn.disabled = false;
-            }
-        });
+            }, 500);
+        }
 
         // Init
         initDragAndDrop();
+        
+        // --- MIC DICTATION ---
+        let recognition = null;
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            recognition.lang = 'es-ES'; // o el idioma que prefieras
+        }
+
+        function toggleDictation(btn) {
+            if (!recognition) {
+                alert("Tu navegador no soporta dictado por voz. Usa Chrome.");
+                return;
+            }
+            
+            const wrapper = btn.closest('.inst-wrapper');
+            const textarea = wrapper.querySelector('textarea');
+            
+            if (btn.classList.contains('recording')) {
+                recognition.stop();
+                btn.classList.remove('recording');
+                btn.innerHTML = '<span class="material-icons-round" style="font-size: 1.1rem;">mic</span>';
+                return;
+            }
+            
+            // Si ya hay alguien grabando, pararlo
+            const activeMic = document.querySelector('.mic-btn.recording');
+            if (activeMic) {
+                activeMic.click();
+            }
+            
+            btn.classList.add('recording');
+            btn.innerHTML = '<span class="material-icons-round" style="font-size: 1.1rem;">stop</span>';
+            
+            let finalTranscript = textarea.value ? textarea.value + " " : "";
+            
+            recognition.onresult = function(event) {
+                let interimTranscript = '';
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) {
+                        finalTranscript += event.results[i][0].transcript;
+                    } else {
+                        interimTranscript += event.results[i][0].transcript;
+                    }
+                }
+                textarea.value = finalTranscript + interimTranscript;
+                textarea.style.height = '';
+                textarea.style.height = textarea.scrollHeight + 'px';
+                textarea.dispatchEvent(new Event('input', { bubbles: true }));
+            };
+            
+            recognition.onerror = function(event) {
+                console.error("Mic error:", event.error);
+                if (event.error === 'not-allowed') {
+                    alert("Permiso de micrófono denegado. Habilita el micrófono en Chrome (candadito en la barra de URL).");
+                } else if (event.error !== 'aborted') {
+                    alert("Error en el micrófono: " + event.error);
+                }
+                btn.classList.remove('recording');
+                btn.innerHTML = '<span class="material-icons-round" style="font-size: 1.1rem;">mic</span>';
+            };
+            
+            recognition.onend = function() {
+                btn.classList.remove('recording');
+                btn.innerHTML = '<span class="material-icons-round" style="font-size: 1.1rem;">mic</span>';
+            };
+            
+            recognition.start();
+        }
+
+        // Event delegation for dynamically created mic buttons
+        document.addEventListener('click', function(e) {
+            const micBtn = e.target.closest('.mic-btn');
+            if (micBtn) {
+                toggleDictation(micBtn);
+            }
+        });
+
+        // Auto-save on dictate end so Voice dictation saves too!
+        const originalToggleDictation = toggleDictation;
+        toggleDictation = function(btn) {
+            // override to call autoSaveControl on end
+            // Handled dynamically inside toggleDictation onresult
+            originalToggleDictation(btn);
+        }
+
         if (controlData && controlData.length > 0) {
             const msg = mainCanvas.querySelector('.empty-canvas-msg');
             if (msg) msg.style.display = 'none';

@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Voice Assistant — Next Steps</title>
+  <title>Voice Assistant ÔÇö Next Steps</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
   <style>
@@ -389,12 +389,12 @@
 <body>
   <header>
     <div class="header-left">
-      <h1>Voice Assistant — Next Steps</h1>
+      <h1>Voice Assistant ÔÇö Next Steps</h1>
       <div class="global-filters" id="globalFilters">
         <label class="filter-cb"><input type="checkbox" value="terminado" checked> Terminado</label>
         <label class="filter-cb"><input type="checkbox" value="pendiente" checked> Pendiente</label>
         <label class="filter-cb"><input type="checkbox" value="en-proceso-haciendo" checked> En proceso</label>
-        <label class="filter-cb"><input type="checkbox" value="proximos" checked> Próximos</label>
+        <label class="filter-cb"><input type="checkbox" value="proximos" checked> Pr├│ximos</label>
       </div>
     </div>
     <div id="saveStatus" class="ok"><span class="dot"></span><span class="txt">Local (offline)</span></div>
@@ -416,17 +416,17 @@
         "id": "fase_1_1",
         "subApp": "1.1. Eliminar la Fuga de Tokens (Exit code 1)",
         "fields": {
-          "objetivo": { "items": [{ "text": "Evitar que el sistema haga 'pings' automáticos consultando saldo y agote la cuota de la API en segundo plano.", "status": "Terminado" }] },
-          "prompt": { "items": [{ "text": "Analiza exhaustivamente app.js y server.js. Existe un temporizador, bucle de sondeo (polling) o 'keep-alive' que se está disparando automáticamente en segundo plano hacia /api/chat o /api/agente, provocando que Groq o el CLI devuelvan continuamente 'Exit code 1 - Individual quota reached'. Ubica este bloque de código y modifícalo para que las peticiones a la IA solo se disparen tras una acción explícita del usuario (clic o envío de voz). No rompas el pollAgente que escucha la respuesta de una tarea que sí está en ejecución.", "status": "Terminado" }] },
+          "objetivo": { "items": [{ "text": "Evitar que el sistema haga 'pings' autom├íticos consultando saldo y agote la cuota de la API en segundo plano.", "status": "Terminado" }] },
+          "prompt": { "items": [{ "text": "Analiza exhaustivamente app.js y server.js. Existe un temporizador, bucle de sondeo (polling) o 'keep-alive' que se est├í disparando autom├íticamente en segundo plano hacia /api/chat o /api/agente, provocando que Groq o el CLI devuelvan continuamente 'Exit code 1 - Individual quota reached'. Ubica este bloque de c├│digo y modif├¡calo para que las peticiones a la IA solo se disparen tras una acci├│n expl├¡cita del usuario (clic o env├¡o de voz). No rompas el pollAgente que escucha la respuesta de una tarea que s├¡ est├í en ejecuci├│n.", "status": "Terminado" }] },
           "detalles": { "items": [] }
         }
       },
       {
         "id": "fase_1_2",
-        "subApp": "1.2. Perfección del Live Reload",
+        "subApp": "1.2. Perfecci├│n del Live Reload",
         "fields": {
           "objetivo": { "items": [{ "text": "Lograr recargas del puerto 3000 transparentes y fluidas.", "status": "Terminado" }] },
-          "prompt": { "items": [{ "text": "En server.js y app.html, revisa el sistema actual de Live Reload del iframeReact que apunta al puerto 3000. Actualmente, usar location.reload() o about:blank genera un pantallazo blanco de medio segundo. Refactoriza este mecanismo implementando una técnica de 'Double Buffering' en el DOM: crea un iframe invisible paralelo, recárgalo allí, y cuando detectes el evento onload, haz un intercambio de opacidad (swap) con el iframe principal. El objetivo es que la recarga de código sea 100% invisible para el ojo.", "status": "Terminado" }] },
+          "prompt": { "items": [{ "text": "En server.js y app.html, revisa el sistema actual de Live Reload del iframeReact que apunta al puerto 3000. Actualmente, usar location.reload() o about:blank genera un pantallazo blanco de medio segundo. Refactoriza este mecanismo implementando una t├®cnica de 'Double Buffering' en el DOM: crea un iframe invisible paralelo, rec├írgalo all├¡, y cuando detectes el evento onload, haz un intercambio de opacidad (swap) con el iframe principal. El objetivo es que la recarga de c├│digo sea 100% invisible para el ojo.", "status": "Terminado" }] },
           "detalles": { "items": [] }
         }
       },
@@ -434,62 +434,62 @@
         "id": "fase_1_3",
         "subApp": "1.3. Persistencia de Estado de la Vista",
         "fields": {
-          "objetivo": { "items": [{ "text": "Tras compilar, volver exactamente al sub-menú, modal o filtro modificado, sin hardcodear el componente.", "status": "Terminado" }] },
-          "prompt": { "items": [{ "text": "Necesito implementar persistencia de estado post-recarga en mi frontend (puerto 3000) de manera genérica. Diseña un wrapper en React (ej. un Custom Hook o un Contexto global) que intercepte y guarde el estado de navegación activo (rutas internas, modales abiertos, pestañas activas como 'Roles') en el sessionStorage o en la URL del iframe. Al detonarse el Live Reload, el componente raíz debe leer este estado y forzar el renderizado de la sub-vista exacta donde el usuario hizo el último cambio, sin hardcodear nombres de componentes.", "status": "Terminado" }] },
+          "objetivo": { "items": [{ "text": "Tras compilar, volver exactamente al sub-men├║, modal o filtro modificado, sin hardcodear el componente.", "status": "Terminado" }] },
+          "prompt": { "items": [{ "text": "Necesito implementar persistencia de estado post-recarga en mi frontend (puerto 3000) de manera gen├®rica. Dise├▒a un wrapper en React (ej. un Custom Hook o un Contexto global) que intercepte y guarde el estado de navegaci├│n activo (rutas internas, modales abiertos, pesta├▒as activas como 'Roles') en el sessionStorage o en la URL del iframe. Al detonarse el Live Reload, el componente ra├¡z debe leer este estado y forzar el renderizado de la sub-vista exacta donde el usuario hizo el ├║ltimo cambio, sin hardcodear nombres de componentes.", "status": "Terminado" }] },
           "detalles": { "items": [] }
         }
       },
       {
         "id": "fase_2_1",
-        "subApp": "2.1. Clonación de Entorno a Producción",
+        "subApp": "2.1. Clonaci├│n de Entorno a Producci├│n",
         "fields": {
           "objetivo": { "items": [{ "text": "Aislar los archivos del Asistente del entorno de desarrollo. a) (El desarrollo que muestra el puerto:3000-'src/interface') b) El archivo de el boton Control y la ruta de las IMG's", "status": "Terminado" }] },
-          "prompt": { "items": [{ "text": "Escribe un script en Node.js llamado build_production.js. Este script actuará como el empaquetador oficial para generar la versión final distribuible del Asistente de Voz para los clientes finales. ES VITAL QUE SEA 100% GENÉRICO Y AGNÓSTICO: está estrictamente prohibido usar rutas absolutas hardcodeadas (nada de C:\\...) o hacer referencias a proyectos de terceros...\nUtiliza rutas dinámicas relativas...\nCopia únicamente los elementos estrictamente necesarios...\nLee el archivo .env actual, pero purga/limpia el valor de todas las variables sensibles...\nAsegúrate de excluir node_modules...\nAñade logs de consola coloridos...", "status": "Terminado" }] },
-          "detalles": { "items": [{ "text": "Con este prompt, el agente te va a crear un script que, al ejecutarlo, generará una carpetita hermosa y limpia llamada dist_production. Esa carpeta será tu 'caja mágica': lista para ser comprimida en un instalador.", "status": "Terminado" }] }
+          "prompt": { "items": [{ "text": "Escribe un script en Node.js llamado build_production.js. Este script actuar├í como el empaquetador oficial para generar la versi├│n final distribuible del Asistente de Voz para los clientes finales. ES VITAL QUE SEA 100% GEN├ëRICO Y AGN├ôSTICO: est├í estrictamente prohibido usar rutas absolutas hardcodeadas (nada de C:\\...) o hacer referencias a proyectos de terceros...\nUtiliza rutas din├ímicas relativas...\nCopia ├║nicamente los elementos estrictamente necesarios...\nLee el archivo .env actual, pero purga/limpia el valor de todas las variables sensibles...\nAseg├║rate de excluir node_modules...\nA├▒ade logs de consola coloridos...", "status": "Terminado" }] },
+          "detalles": { "items": [{ "text": "Con este prompt, el agente te va a crear un script que, al ejecutarlo, generar├í una carpetita hermosa y limpia llamada dist_production. Esa carpeta ser├í tu 'caja m├ígica': lista para ser comprimida en un instalador.", "status": "Terminado" }] }
         }
       },
       {
         "id": "fase_2_2",
-        "subApp": "2.2. Botón 'Control' Dinámico (Creador de Templates)",
+        "subApp": "2.2. Bot├│n 'Control' Din├ímico (Creador de Templates)",
         "fields": {
           "objetivo": { "items": [{ "text": "Permitir al usuario final crear y controlar sus propias listas de tareas y tarjetas sin depender de tu archivo 'TFTE Next Steps'.", "status": "Terminado" }] },
-          "prompt": { "items": [{ "text": "En app.js y server.js, el botón de 'Control' actualmente está hardcodeado a mi archivo personal. Rediseña esta arquitectura: crea un endpoint que genere un archivo JSON/HTML de 'Template de Tareas' vacío en el CONTEXT_PATH del cliente. Implementa una vista en el frontend que, al detectar que el archivo no existe, le pregunte al usuario: '¿Crear entorno de control para este proyecto?'. Si acepta, genera el archivo dinámicamente y vincula el iframe de Control a este nuevo archivo.", "status": "Terminado" }] },
+          "prompt": { "items": [{ "text": "En app.js y server.js, el bot├│n de 'Control' actualmente est├í hardcodeado a mi archivo personal. Redise├▒a esta arquitectura: crea un endpoint que genere un archivo JSON/HTML de 'Template de Tareas' vac├¡o en el CONTEXT_PATH del cliente. Implementa una vista en el frontend que, al detectar que el archivo no existe, le pregunte al usuario: '┬┐Crear entorno de control para este proyecto?'. Si acepta, genera el archivo din├ímicamente y vincula el iframe de Control a este nuevo archivo.", "status": "Terminado" }] },
           "detalles": { "items": [] }
         }
       },
       {
         "id": "fase_2_3",
-        "subApp": "2.3. Ruta Inteligente del Plan de Implementación ('Brain')",
+        "subApp": "2.3. Ruta Inteligente del Plan de Implementaci├│n ('Brain')",
         "fields": {
-          "objetivo": { "items": [{ "text": "Que el asistente busque el plan estratégico donde corresponde, no en tu carpeta de Windows.", "status": "Terminado" }] },
-          "prompt": { "items": [{ "text": "En server.js, localiza el endpoint /api/agente/plan que busca el directorio 'brain' en os.homedir(). Modifica esta función para que sea inteligente: primero debe buscar una carpeta .brain u ocultos de planes dentro del ROOT_DIR (el proyecto del cliente). Si no la encuentra, debe retroceder a buscar la ruta por defecto del IDE. Devuelve un estado 404 claro si no hay planes, para que el frontend muestre un mensaje UX amigable en vez de fallar.", "status": "Terminado" }] },
+          "objetivo": { "items": [{ "text": "Que el asistente busque el plan estrat├®gico donde corresponde, no en tu carpeta de Windows.", "status": "Terminado" }] },
+          "prompt": { "items": [{ "text": "En server.js, localiza el endpoint /api/agente/plan que busca el directorio 'brain' en os.homedir(). Modifica esta funci├│n para que sea inteligente: primero debe buscar una carpeta .brain u ocultos de planes dentro del ROOT_DIR (el proyecto del cliente). Si no la encuentra, debe retroceder a buscar la ruta por defecto del IDE. Devuelve un estado 404 claro si no hay planes, para que el frontend muestre un mensaje UX amigable en vez de fallar.", "status": "Terminado" }] },
           "detalles": { "items": [] }
         }
       },
       {
         "id": "fase_2_4",
-        "subApp": "2.4. Visor Multimedia Dinámico (Imgs)",
+        "subApp": "2.4. Visor Multimedia Din├ímico (Imgs)",
         "fields": {
-          "objetivo": { "items": [{ "text": "Levantar las imágenes del proyecto activo del usuario.", "status": "Terminado" }] },
-          "prompt": { "items": [{ "text": "Modifica el endpoint /api/browse en server.js y la pestaña de imágenes. Actualmente apunta a una carpeta hardcodeada FrontImgs. Reescribe la lógica para que escanee recursivamente el CONTEXT_PATH del usuario buscando carpetas típicas de assets (ej. /public/images, /src/assets). Si encuentra imágenes, debe servirlas dinámicamente en el iframe de la Galería.", "status": "Terminado" }] },
+          "objetivo": { "items": [{ "text": "Levantar las im├ígenes del proyecto activo del usuario.", "status": "Terminado" }] },
+          "prompt": { "items": [{ "text": "Modifica el endpoint /api/browse en server.js y la pesta├▒a de im├ígenes. Actualmente apunta a una carpeta hardcodeada FrontImgs. Reescribe la l├│gica para que escanee recursivamente el CONTEXT_PATH del usuario buscando carpetas t├¡picas de assets (ej. /public/images, /src/assets). Si encuentra im├ígenes, debe servirlas din├ímicamente en el iframe de la Galer├¡a.", "status": "Terminado" }] },
           "detalles": { "items": [] }
         }
       },
       {
         "id": "fase_3_1",
-        "subApp": "3.1. Auto-Reconexión del Túnel (Resiliencia)",
+        "subApp": "3.1. Auto-Reconexi├│n del T├║nel (Resiliencia)",
         "fields": {
           "objetivo": { "items": [{ "text": "Que el software reinicie Cloudflare solo si se corta por inactividad.", "status": "Terminado" }] },
-          "prompt": { "items": [{ "text": "Crea un script secundario tunnel_monitor.ps1. Su función será ejecutarse en segundo plano (bucle while($true)) y comprobar cada 30 segundos si el proceso cloudflared.exe sigue activo y respondiendo. Si detecta que el túnel se cayó, debe matar el proceso huérfano, lanzar uno nuevo, esperar a que genere el log, extraer la nueva URL y sobreescribir current-url.txt silenciosamente.", "status": "Terminado" }] },
+          "prompt": { "items": [{ "text": "Crea un script secundario tunnel_monitor.ps1. Su funci├│n ser├í ejecutarse en segundo plano (bucle while($true)) y comprobar cada 30 segundos si el proceso cloudflared.exe sigue activo y respondiendo. Si detecta que el t├║nel se cay├│, debe matar el proceso hu├®rfano, lanzar uno nuevo, esperar a que genere el log, extraer la nueva URL y sobreescribir current-url.txt silenciosamente.", "status": "Terminado" }] },
           "detalles": { "items": [] }
         }
       },
       {
         "id": "fase_3_2",
-        "subApp": "3.2. Notificación por Correo de Nueva URL",
+        "subApp": "3.2. Notificaci├│n por Correo de Nueva URL",
         "fields": {
           "objetivo": { "items": [{ "text": "Mandarte la nueva URL por mail cuando Cloudflare la cambie.", "status": "Terminado" }] },
-          "prompt": { "items": [{ "text": "Modifica server.js para integrar un sistema de notificaciones automáticas por correo electrónico utilizando nodemailer. Contexto del producto: El instalador del software le pedirá al cliente final su correo electrónico y lo escribirá dinámicamente en el archivo .env bajo la variable USER_EMAIL...\nConfigura el transporte (Transport) de Nodemailer preparándolo para leer credenciales corporativas desde el .env...\nImplementa un fs.watch o fs.watchFile apuntando al archivo current-url.txt...", "status": "Terminado" }] },
+          "prompt": { "items": [{ "text": "Modifica server.js para integrar un sistema de notificaciones autom├íticas por correo electr├│nico utilizando nodemailer. Contexto del producto: El instalador del software le pedir├í al cliente final su correo electr├│nico y lo escribir├í din├ímicamente en el archivo .env bajo la variable USER_EMAIL...\nConfigura el transporte (Transport) de Nodemailer prepar├índolo para leer credenciales corporativas desde el .env...\nImplementa un fs.watch o fs.watchFile apuntando al archivo current-url.txt...", "status": "Terminado" }] },
           "detalles": { "items": [{ "text": "El Instalador (Inno Setup): Le pide el mail y lo guarda en el archivo .env. El Servidor (Node.js): Lee ese archivo, vigila que Cloudflare genere la URL, y dispara el correo.", "status": "Terminado" }] }
         }
       },
@@ -498,7 +498,7 @@
         "subApp": "3.3. Licencia Vinculada a Hardware",
         "fields": {
           "objetivo": { "items": [{ "text": "Evitar que renueven el trial borrando un .json.", "status": "Terminado" }] },
-          "prompt": { "items": [{ "text": "Modifica la función getLicenseStatus en server.js. En lugar de basarse en un archivo JSON fácilmente borrable, utiliza el módulo nativo os.networkInterfaces() para extraer la dirección MAC principal de la máquina. Genera un Hash SHA-256 usando esta MAC y guarda la fecha de inicio del Trial de 7 días usando este Hash. Esto hará el bloqueo de trial mucho más robusto contra manipulaciones básicas.", "status": "Terminado" }] },
+          "prompt": { "items": [{ "text": "Modifica la funci├│n getLicenseStatus en server.js. En lugar de basarse en un archivo JSON f├ícilmente borrable, utiliza el m├│dulo nativo os.networkInterfaces() para extraer la direcci├│n MAC principal de la m├íquina. Genera un Hash SHA-256 usando esta MAC y guarda la fecha de inicio del Trial de 7 d├¡as usando este Hash. Esto har├í el bloqueo de trial mucho m├ís robusto contra manipulaciones b├ísicas.", "status": "Terminado" }] },
           "detalles": { "items": [] }
         }
       },
@@ -507,8 +507,8 @@
         "subApp": "3.4. Base de Datos Central (Licencias)",
         "fields": {
           "objetivo": { "items": [{ "text": "Almacenar y validar remotamente los HWID (MAC Addresses) de los clientes.", "status": "Pendiente" }] },
-          "prompt": { "items": [{ "text": "Desarrolla el script backend para el 'Servidor Madre' (ej. en Vercel, Firebase o Supabase) que recibirá el POST desde el server.js del cliente con su HWID generado en tiempo de ejecución. El servidor madre guardará el HWID en una base de datos junto con la fecha de expiración, y devolverá true/false según si la licencia sigue activa.", "status": "Pendiente" }] },
-          "detalles": { "items": [{ "text": "Este proceso ocurre en el servidor Node.js del cliente (server.js) EN TIEMPO DE EJECUCIÓN (cuando arranca el Asistente), NO durante la instalación (Inno Setup). Así evitamos fraudes por clonación de discos.", "status": "Pendiente" }] }
+          "prompt": { "items": [{ "text": "Desarrolla el script backend para el 'Servidor Madre' (ej. en Vercel, Firebase o Supabase) que recibir├í el POST desde el server.js del cliente con su HWID generado en tiempo de ejecuci├│n. El servidor madre guardar├í el HWID en una base de datos junto con la fecha de expiraci├│n, y devolver├í true/false seg├║n si la licencia sigue activa.", "status": "Pendiente" }] },
+          "detalles": { "items": [{ "text": "Este proceso ocurre en el servidor Node.js del cliente (server.js) EN TIEMPO DE EJECUCI├ôN (cuando arranca el Asistente), NO durante la instalaci├│n (Inno Setup). As├¡ evitamos fraudes por clonaci├│n de discos.", "status": "Pendiente" }] }
         }
       },
       {
@@ -516,25 +516,25 @@
         "subApp": "4.1. Mini App Desktop de Rescate",
         "fields": {
           "objetivo": { "items": [{ "text": "Un ejecutable local en caso de que la red externa falle totalmente.", "status": "Terminado" }] },
-          "prompt": { "items": [{ "text": "Desarrolla una pequeña interfaz gráfica de escritorio en Python usando tkinter. El archivo se llamará Tfte_Rescue_Panel.pyw. Debe tener una ventana minimalista oscura con dos botones grandes: 'Forzar Reinicio del Túnel' y 'Reiniciar Asistente Local'. Estos botones ejecutarán subprocesos del sistema para matar node.exe y cloudflared.exe e invocar el script de arranque nuevamente. Es un panel de control a prueba de fallos.", "status": "Terminado" }] },
+          "prompt": { "items": [{ "text": "Desarrolla una peque├▒a interfaz gr├ífica de escritorio en Python usando tkinter. El archivo se llamar├í Tfte_Rescue_Panel.pyw. Debe tener una ventana minimalista oscura con dos botones grandes: 'Forzar Reinicio del T├║nel' y 'Reiniciar Asistente Local'. Estos botones ejecutar├ín subprocesos del sistema para matar node.exe y cloudflared.exe e invocar el script de arranque nuevamente. Es un panel de control a prueba de fallos.", "status": "Terminado" }] },
           "detalles": { "items": [] }
         }
       },
       {
         "id": "fase_4_2",
-        "subApp": "4.2. Go-to-Market y Distribución",
+        "subApp": "4.2. Go-to-Market y Distribuci├│n",
         "fields": {
-          "objetivo": { "items": [{ "text": "Cómo llegar a tu SOM inicial (50.000 a 200.000 usuarios).", "status": "Pendiente" }] },
-          "prompt": { "items": [{ "text": "Creación de Aplicación Android", "status": "Pendiente" }] },
-          "detalles": { "items": [{ "text": "Escaparate Digital: Crear una Landing Page gratuita y sencilla que explique la propuesta de valor y contenga el link de descarga. Canales de Tracción: Publicar el asistente en GitHub y posicionarlo en los marketplaces de los IDEs. Mensaje de Venta: Enfocarse en la bajísima latencia y ejecución local.", "status": "Pendiente" }] }
+          "objetivo": { "items": [{ "text": "C├│mo llegar a tu SOM inicial (50.000 a 200.000 usuarios).", "status": "Pendiente" }] },
+          "prompt": { "items": [{ "text": "Creaci├│n de Aplicaci├│n Android", "status": "Pendiente" }] },
+          "detalles": { "items": [{ "text": "Escaparate Digital: Crear una Landing Page gratuita y sencilla que explique la propuesta de valor y contenga el link de descarga. Canales de Tracci├│n: Publicar el asistente en GitHub y posicionarlo en los marketplaces de los IDEs. Mensaje de Venta: Enfocarse en la baj├¡sima latencia y ejecuci├│n local.", "status": "Pendiente" }] }
         }
       },
       {
         "id": "fase_5_1",
-        "subApp": "5.1. Detección de Archivo Activo (Frontend)",
+        "subApp": "5.1. Detecci├│n de Archivo Activo (Frontend)",
         "fields": {
-          "objetivo": { "items": [{ "text": "Conocer en qué archivo React está trabajando el usuario en tiempo real.", "status": "Proximos" }] },
-          "prompt": { "items": [{ "text": "Configura un window.addEventListener('message', ...) en app.js para escuchar eventos provenientes del iframeReact. La app de React enviará mensajes con su ruta actual (ej. { type: 'ACTIVE_FILE', file: 'ComparePlayersBI.js' }). Guarda este archivo en una variable global para usarlo como contexto en las siguientes peticiones de voz.", "status": "Proximos" }] },
+          "objetivo": { "items": [{ "text": "Conocer en qu├® archivo React est├í trabajando el usuario en tiempo real.", "status": "Proximos" }] },
+          "prompt": { "items": [{ "text": "Configura un window.addEventListener('message', ...) en app.js para escuchar eventos provenientes del iframeReact. La app de React enviar├í mensajes con su ruta actual (ej. { type: 'ACTIVE_FILE', file: 'ComparePlayersBI.js' }). Guarda este archivo en una variable global para usarlo como contexto en las siguientes peticiones de voz.", "status": "Proximos" }] },
           "detalles": { "items": [] }
         }
       },
@@ -543,26 +543,26 @@
         "subApp": "5.2. Smart @-Mentions",
         "fields": {
           "objetivo": { "items": [{ "text": "Interactuar de forma eficiente usando @-mentions basadas en el archivo activo.", "status": "Proximos" }] },
-          "prompt": { "items": [{ "text": "Implementa la funcionalidad 'Smart @-Mentions' en el frontend y backend. Inyección Visual: Al hacer clic en keyboardBtn inyecta '@NombreDelArchivo.js '. Optimización del Prompt: En /api/agente, si el mensaje comienza con @, extrae el archivo y concatena una instrucción oculta limitando el contexto estrictamente a ese archivo.", "status": "Proximos" }] },
-          "detalles": { "items": [{ "text": "Asegúrate de que la lógica sea robusta y no rompa la ejecución si el usuario decide borrar el arroba manualmente.", "status": "Proximos" }] }
+          "prompt": { "items": [{ "text": "Implementa la funcionalidad 'Smart @-Mentions' en el frontend y backend. Inyecci├│n Visual: Al hacer clic en keyboardBtn inyecta '@NombreDelArchivo.js '. Optimizaci├│n del Prompt: En /api/agente, si el mensaje comienza con @, extrae el archivo y concatena una instrucci├│n oculta limitando el contexto estrictamente a ese archivo.", "status": "Proximos" }] },
+          "detalles": { "items": [{ "text": "Aseg├║rate de que la l├│gica sea robusta y no rompa la ejecuci├│n si el usuario decide borrar el arroba manualmente.", "status": "Proximos" }] }
         }
       },
       {
         "id": "fase_5_3",
-        "subApp": "5.3. Toggle de Funciones B2B (Separación Free/Premium)",
+        "subApp": "5.3. Toggle de Funciones B2B (Separaci├│n Free/Premium)",
         "fields": {
-          "objetivo": { "items": [{ "text": "Downgradear features del plan Free tras los 7 días de prueba completa, y añadir features exclusivos al Premium.", "status": "Proximos" }] },
-          "prompt": { "items": [{ "text": "En server.js, expande el licenseMiddleware. Inyecta un objeto 'features' en la API. Si isPro es false (y expiró el trial), deshabilita historial, temas, y Smart @-Mentions. En app.js, lee este objeto y oculta o desactiva visualmente estos paneles.", "status": "Proximos" }] },
-          "detalles": { "items": [{ "text": "Estrategia de Ventas: Darle 7 días de acceso TOTAL a la herramienta para que se enganchen. Una vez venza, capar funcionalidades Premium y dejar lo básico. Guardar 1 o 2 features extra para futuras actualizaciones de retención.", "status": "Proximos" }] }
+          "objetivo": { "items": [{ "text": "Downgradear features del plan Free tras los 7 d├¡as de prueba completa, y a├▒adir features exclusivos al Premium.", "status": "Proximos" }] },
+          "prompt": { "items": [{ "text": "En server.js, expande el licenseMiddleware. Inyecta un objeto 'features' en la API. Si isPro es false (y expir├│ el trial), deshabilita historial, temas, y Smart @-Mentions. En app.js, lee este objeto y oculta o desactiva visualmente estos paneles.", "status": "Proximos" }] },
+          "detalles": { "items": [{ "text": "Estrategia de Ventas: Darle 7 d├¡as de acceso TOTAL a la herramienta para que se enganchen. Una vez venza, capar funcionalidades Premium y dejar lo b├ísico. Guardar 1 o 2 features extra para futuras actualizaciones de retenci├│n.", "status": "Proximos" }] }
         }
       },
       {
         "id": "fase_6_1",
-        "subApp": "6.1. Refactorización (Proyecto Cliente: TFTE)",
+        "subApp": "6.1. Refactorizaci├│n (Proyecto Cliente: TFTE)",
         "fields": {
-          "objetivo": { "items": [{ "text": "Refactorizar la aplicación de fútbol (TFTE) de 'useState' a URLs reales (react-router-dom) para habilitar Deep Linking y Live Reload 100% nativo.", "status": "Proximos" }] },
-          "prompt": { "items": [{ "text": "Instala react-router-dom en el proyecto TFTE. En App.js, reemplaza el estado 'screen' por un <BrowserRouter> y <Routes>. En AppRoutes.js, exporta las rutas estáticas. En los Index.js de cada módulo (ej. 2mog), reemplaza el estado 'currentView' por rutas anidadas. Reemplaza todos los botones de 'onBack' y handlers por el hook useNavigate() o <Link>.", "status": "Proximos" }] },
-          "detalles": { "items": [{ "text": "Esta tarea pertenece al proyecto de fútbol (C:\\TFTE), NO al producto comercial Voice Assistant. Se hará en el futuro para modernizar la arquitectura del cliente.", "status": "Proximos" }] }
+          "objetivo": { "items": [{ "text": "Refactorizar la aplicaci├│n de f├║tbol (TFTE) de 'useState' a URLs reales (react-router-dom) para habilitar Deep Linking y Live Reload 100% nativo.", "status": "Proximos" }] },
+          "prompt": { "items": [{ "text": "Instala react-router-dom en el proyecto TFTE. En App.js, reemplaza el estado 'screen' por un <BrowserRouter> y <Routes>. En AppRoutes.js, exporta las rutas est├íticas. En los Index.js de cada m├│dulo (ej. 2mog), reemplaza el estado 'currentView' por rutas anidadas. Reemplaza todos los botones de 'onBack' y handlers por el hook useNavigate() o <Link>.", "status": "Proximos" }] },
+          "detalles": { "items": [{ "text": "Esta tarea pertenece al proyecto de f├║tbol (C:\\TFTE), NO al producto comercial Voice Assistant. Se har├í en el futuro para modernizar la arquitectura del cliente.", "status": "Proximos" }] }
         }
       }
     ];
@@ -650,7 +650,7 @@
             const text = document.createElement('div');
             text.className = 'item-text';
             text.contentEditable = 'true';
-            text.setAttribute('data-placeholder', 'Escribí acá...');
+            text.setAttribute('data-placeholder', 'Escrib├¡ ac├í...');
             text.textContent = item.text;
             text.addEventListener('blur', () => {
               if (item.text !== text.textContent) {
@@ -752,26 +752,29 @@
     render();
     setSaveStatus('ok', 'Cargado (offline)');
 
-    // ─── AUTO-SAVE ──────────────────────────────────────────────────────────
+    // ─── AUTO-SAVE (LOCALSTORAGE) ──────────────────────────────────────────────────────────
     let saveTimeout;
     function autoSave() {
       clearTimeout(saveTimeout);
       setSaveStatus('saving', 'Guardando...');
 
       saveTimeout = setTimeout(() => {
-        fetch('/api/save-next-steps', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'same-origin',
-          body: JSON.stringify(data)
-        })
-          .then(res => res.json())
-          .then(() => setSaveStatus('ok', 'Guardado ✓'))
-          .catch(err => {
-            console.error('Error guardando:', err);
-            setSaveStatus('error', 'Error al guardar');
-          });
+        try {
+          localStorage.setItem('tfte_agenda_data', JSON.stringify(data));
+          setSaveStatus('ok', 'Guardado en Navegador ✓');
+        } catch (err) {
+          console.error('Error guardando:', err);
+          setSaveStatus('error', 'Error al guardar');
+        }
       }, 800); // Espera 800ms después del último cambio
+    }
+
+    // Al cargar, intentar recuperar de localStorage
+    const savedData = localStorage.getItem('tfte_agenda_data');
+    if (savedData) {
+        try {
+            data = JSON.parse(savedData);
+        } catch(e) {}
     }
 
     // Listener para cambios en el modelo

@@ -1,6 +1,6 @@
 [Setup]
 AppName=TFTE Voice Assistant
-AppVersion=1.0
+AppVersion=1.1
 DefaultDirName={localappdata}\TFTE\VoiceAssistant
 OutputDir=.\Output
 OutputBaseFilename=Instalar_Asistente_TFTE
@@ -168,6 +168,8 @@ begin
                   'SMTP_PORT=587' + #13#10 +
                   'SMTP_USER=tfte.voiceassist@gmail.com' + #13#10 +
                   'SMTP_PASS=lgvfryvfniklizay' + #13#10 +
+                  'SUPABASE_URL=https://anpqlsxazrrbejubview.supabase.co' + #13#10 +
+                  'SUPABASE_ANON_KEY=sb_publishable_Ssd5fsrgT5fJ-UKFUt9w-Q_brwm41v0' + #13#10 +
                   'ENV=production';
     SaveStringToFile(ExpandConstant('{app}\.env'), EnvContent, False);
 
@@ -180,14 +182,30 @@ begin
                       'Write-Host ""' + #13#10 +
                       '$root = $PSScriptRoot' + #13#10 +
                       'if (-not $root) { $root = Split-Path -Parent $MyInvocation.MyCommand.Definition }' + #13#10 +
-                      'Write-Host " [1/4] Comprobando procesos activos..." -ForegroundColor Yellow' + #13#10 +
+                      'Write-Host " [1/5] Comprobando procesos activos..." -ForegroundColor Yellow' + #13#10 +
                       '$isAppRunning = Get-Process -Name "VoiceAssistant_TFTE" -ErrorAction SilentlyContinue' + #13#10 +
                       'if (-not $isAppRunning) {' + #13#10 +
                       '    Remove-Item (Join-Path $root "current-url.txt") -ErrorAction SilentlyContinue' + #13#10 +
-                      '    Write-Host " [2/4] Levantando servidor, app React y Watchdog..." -ForegroundColor Yellow' + #13#10 +
+                      '    Write-Host " [2/5] Levantando servidor, app React y Watchdog..." -ForegroundColor Yellow' + #13#10 +
                       '    Start-Process "powershell.exe" -ArgumentList "-ExecutionPolicy Bypass -WindowStyle Hidden -File `"$root\watchdog.ps1`"" -WindowStyle Hidden' + #13#10 +
                       '}' + #13#10 +
-                      'Write-Host " [3/4] Enganchando el tunel de Cloudflare..." -ForegroundColor Yellow' + #13#10 +
+                      'Write-Host " [3/5] Verificando dependencias de IA (Antigravity)..." -ForegroundColor Yellow' + #13#10 +
+                      '$agyPath1 = Join-Path $env:LOCALAPPDATA "agy\bin\agy.exe"' + #13#10 +
+                      '$agyPath2 = (Get-Command agy.exe -ErrorAction SilentlyContinue).Path' + #13#10 +
+                      'if (-not (Test-Path $agyPath1) -and -not $agyPath2) {' + #13#10 +
+                      '    Write-Host ""' + #13#10 +
+                      '    Write-Host " [ALERTA] Antigravity CLI (agy) NO DETECTADO." -ForegroundColor Red' + #13#10 +
+                      '    Write-Host " Intentando instalar dependencias automaticamente via npm..." -ForegroundColor Cyan' + #13#10 +
+                      '    npm i -g @google/antigravity -f' + #13#10 +
+                      '    $agyPath2 = (Get-Command agy.exe -ErrorAction SilentlyContinue).Path' + #13#10 +
+                      '    if (-not (Test-Path $agyPath1) -and -not $agyPath2) {' + #13#10 +
+                      '        Write-Host " [ERROR CRITICO] Fallo la instalacion automatica. Necesitas NodeJS para instalar el Agente de IA." -ForegroundColor Red' + #13#10 +
+                      '        Write-Host " Presiona cualquier tecla para salir..." -ForegroundColor Gray' + #13#10 +
+                      '        $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")' + #13#10 +
+                      '        exit' + #13#10 +
+                      '    }' + #13#10 +
+                      '}' + #13#10 +
+                      'Write-Host " [4/5] Enganchando el tunel de Cloudflare..." -ForegroundColor Yellow' + #13#10 +
                       '$counter = 0; $url = $null' + #13#10 +
                       'while ($counter -lt 30) {' + #13#10 +
                       '    $counter++' + #13#10 +

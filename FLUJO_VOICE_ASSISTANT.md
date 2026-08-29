@@ -1,56 +1,40 @@
 # Flujo de Procesos: TFTE Voice Assistant
 
-Este documento describe detalladamente la secuencia de eventos, interacciones de usuario y procesamiento de datos que ocurren en la aplicación TFTE Voice Assistant, desde el momento en que se ingresa a la URL hasta que el asistente responde con voz.
+Este documento describe detalladamente la secuencia de eventos, arquitectura de licenciamiento, interacciones de usuario y procesamiento de datos que ocurren en la aplicación TFTE Voice Assistant, desde su instalación hasta la ejecución de instrucciones por voz.
 
-## 1. Carga Inicial, Persistencia y Contexto
+## 1. Arranque, Licenciamiento y Anti-Piratería (DRM)
 
-1. **Ingreso a la URL:** El usuario accede a la URL (ej. `http://localhost:4000/` o mediante un túnel como Cloudflare o Ngrok).
-2. **Servidor Express:** El archivo `server.js` intercepta la petición y sirve la interfaz principal (`app.html`), junto con la lógica del lado del cliente (`app.js`).
-3. **Persistencia de Sesión (F5 Inteligente):** Al cargar, el sistema lee `localStorage` (`tfte_session_active`). Si es la primera vez que se ingresa, se muestra un Modal oscuro gigante. Si el usuario ya había iniciado sesión y recargó la página (F5), se saltea este paso para no volver a enviar el contexto, ahorrando créditos de la API (tokens) y reanudando la conversación (`--continue`) de inmediato.
-4. **Vinculación (Primer Inicio):** Al hacer clic en "Cargar Contexto", se vincula al Agente (Gemini Pro High) y se desbloquea el subsistema de audio de iOS (TTS).
-5. **Reseteo de Sesión:** Si el usuario desea purgar el historial y comenzar una sesión en blanco con el Agente, puede abrir el Repositorio de Tareas y utilizar el botón "Limpiar Historial" (Tacho de basura), lo cual purga la sesión y vuelve a requerir la carga del contexto.
+1. **Instalación (`.exe`):** El usuario instala el software. Durante la instalación, Inno Setup solicita el correo electrónico del usuario y lo inyecta dinámicamente en el archivo `.env`. No se realizan validaciones de licencia en esta etapa para evitar falsificaciones al clonar la carpeta.
+2. **Ejecución y Generación de HWID:** Al iniciar el servidor Node.js (`server.js`), el sistema obtiene la Dirección MAC nativa de la máquina (usando `os.networkInterfaces()`) y genera un Hash único (HWID).
+3. **Validación Nube vs Local:** 
+   - El sistema hace una petición silenciosa a la base de datos **Supabase** (Servidor Madre) preguntando: *"¿Este HWID tiene `is_active = TRUE`?"*.
+   - Si la respuesta es **SÍ**, el Asistente se desbloquea en modo "Premium" permanente.
+   - Si la respuesta es **NO** (o no hay internet), el sistema recurre al archivo local `.tfte_license.json`. Si es la primera vez que se abre, inicia un **Free Trial de 7 días** asociado a ese HWID. Si pasaron los 7 días, el servidor bloquea todas las peticiones a la IA y muestra un mensaje de "Licencia Expirada".
 
-## 2. Interfaz de Usuario (UI) y Controles Principales
+## 2. Auto-Túnel y Notificación por Correo
 
-La interfaz está diseñada para ser un overlay sobre la aplicación en desarrollo (ej. React) cargada mediante un `iframe` central.
+1. **Túnel Resiliente:** Un script en segundo plano (`watchdog.ps1` o `tunnel_monitor.ps1`) garantiza que `cloudflared.exe` esté siempre corriendo. Si Cloudflare se cae, el script lo reinicia automáticamente.
+2. **Extracción de URL:** El sistema escanea los logs de Cloudflare en tiempo real para atrapar la nueva URL pública (ej. `https://random-words.trycloudflare.com`).
+3. **Envío de Email (Nodemailer):** Una vez obtenida la nueva URL, el servidor utiliza las credenciales corporativas y el correo del cliente (guardado en el `.env`) para enviarle un correo automático diciendo: *"Tu asistente está listo. Accede desde tu iPad aquí: [URL]"*.
 
-*   **Botón de Micrófono (`micBtn`):** Control principal para iniciar/detener la captura de voz.
-*   **Botón de Teclado (`keyboardBtn`):** Despliega un panel lateral (`textPanel`) para escribir instrucciones manualmente.
-*   **Botón de Repetir (`lastMessageBtn`):** Vuelve a reproducir por audio la última respuesta del asistente.
-*   **Repositorio de Tareas:** Panel que registra el historial de las acciones ejecutadas. Posee un "Backdrop" (capa invisible) que permite que se cierre automáticamente al tocar fuera del panel (incluso sobre el iframe).
+## 3. Interfaz de Usuario (UI) y Tablero de Control
 
-## 3. Captura de Audio, Transcripción y Cola (Whisper)
+El frontend principal (`app.html`) se sirve desde el servidor local. 
+1. **Doble Cerebro:** El panel superior muestra un `iframe` que puede alternar entre la aplicación en desarrollo (ej. React en puerto 3000) o el **Tablero de Control** (`Project_Control.html`).
+2. **Tablero Dinámico:** En el Tablero de Control, el usuario puede arrastrar componentes (Screens, Cards, Modales) desde una paleta izquierda de 140px. Cada componente permite dictar o escribir instrucciones específicas.
+3. **Guardado Invisible:** Al hacer clic fuera de cualquier cuadro de texto o al terminar de dictar por voz, el tablero se guarda silenciosamente en el disco duro del cliente mediante un POST al servidor, sin botones de "Guardar".
+4. **Cola de Tareas Centralizada:** Todo lo que se escriba en el Tablero de Control, junto con el archivo de Next Steps antiguo, se consolida mágicamente en la pestaña inferior **"Próximas Tareas"**. Esto permite enviar las tareas a la IA con un solo clic.
 
-1. **Interacción y Grabación:** El usuario toca el Micrófono. Comienza a grabar usando `MediaRecorder` mientras el motor de voz escucha. La interfaz muestra "Escuchando...".
-2. **Corte Rápido (Silence Timeout):** Si el usuario deja de hablar por **2 segundos**, la grabación se corta automáticamente para acelerar la interacción (el motor detecta silencio real). También puede cortarse forzadamente con otro toque manual al botón.
-3. **Operación Silenciosa (Whisper):** El audio crudo (Blob) va al servidor (`POST /api/transcribe`) y se deriva al modelo Whisper. No se despliegan ventanas de edición invasivas; Whisper corrige el texto en segundo plano y muestra directamente el resultado final y perfecto en la interfaz inferior (etiqueta del globo).
-4. **Cola de Retención (Delay de Cancelación):** El mensaje transcrito NO se envía instantáneamente al agente. Se introduce en una **cola de 3.5 segundos**. 
-5. **Botón Abortar (Cruz Roja ❌):** Durante esos 3.5 segundos, el usuario tiene tiempo de leer lo que Whisper tradujo. Si hay un error, puede tocar la **"X" roja** junto al mensaje para abortarlo, sacarlo de la cola y evitar que el Agente se ponga a trabajar en algo erróneo. Incluso si el Agente ya empezó a pensar, la "X" roja inyecta un comando de aborto al CLI.
+## 4. Captura de Audio, Transcripción (Whisper) y Live Reload
 
-## 4. Procesamiento del Agente y Lógica [REQUIERE_CONFIRMACION]
+1. **Interacción y Grabación:** El usuario toca el Micrófono (`micBtn`). Se graba usando `MediaRecorder`.
+2. **Corte Rápido (Silence Timeout):** Si hay 2 segundos de silencio absoluto, el audio se corta solo.
+3. **Operación Silenciosa (Whisper):** El audio crudo va a `/api/transcribe`. Se utiliza Whisper para una corrección gramatical perfecta en segundo plano.
+4. **Cola de Retención (3.5s):** El texto transcrito se muestra en la pantalla durante 3.5 segundos, permitiendo al usuario cancelarlo con una "X" roja antes de que llegue a la IA.
+5. **Live Reload Transparente:** Si la IA o el usuario modifican el código de la app, el frontend hace un "Double Buffering" del iframe (intercambio de opacidad) para recargar la vista sin pantallazos blancos, manteniendo el estado de navegación activo guardado en `sessionStorage`.
 
-1. **Delegación al Watcher:** Si el mensaje supera la cola de los 3.5s, se envía al servidor mediante `POST /api/agente` y es atrapado por el *Watcher* (ej. `engine.js` + `watch-gemini.js`).
-2. **Inyección en el CLI (Antigravity):** El mensaje va al motor subyacente. El Frontend hace *polling* constante para mostrar "Pensando..." o "Ejecutando...".
-3. **Detección Conversacional vs Modificación:** 
-    *   **Conversaciones (Por defecto):** Si el usuario hace una simple pregunta ("¿Quién eres?", "¿Cómo funciona esto?"), el Agente responde naturalmente. El backend lo detecta y asume un estado `idle`, sin molestar al usuario con pedidos de confirmación innecesarios.
-    *   **Modificaciones Estrictas:** Si (y solo si) el agente decide que va a MODIFICAR, ELIMINAR o CREAR archivos, está entrenado mediante inyección de *System Prompt* para colocar obligatoriamente la etiqueta `[REQUIERE_CONFIRMACION]` al final de su plan de 2 oraciones.
-4. **Pausa y Confirmación:** Al detectar la etiqueta `[REQUIERE_CONFIRMACION]`, el backend entra en pausa (`esperando_confirmacion`). El usuario debe responder "Sí", "Dale", "Procedé" (ya sea por voz o texto) para autorizar los cambios en `C:\TFTE`.
+## 5. El Agente Inteligente (Antigravity) y Confirmaciones
 
-## 5. Contestación y Síntesis de Voz (Texto a Audio)
-
-1. **Resumen y Presentación:** El Agente devuelve su reporte final.
-2. **Generación de Voz (TTS):** Se invoca `playAgentAudio()`. Como se usa la API de Windows/Browser nativa (`window.speechSynthesis`) es completamente instantánea (sin demoras). Si se utiliza un motor en la nube (como OpenAI TTS/Google), requeriría generar un MP3 pero daría voces humanas realistas.
-3. **Interrupción (Barge-in / Corte):** Si mientras la IA está hablando el usuario toca la cruz roja "X" del globo, o interactúa con el botón de micrófono, el audio de síntesis se corta inmediatamente para no entorpecer el flujo de trabajo.
-
-## 6. Boton Nube Github
-¿Cómo funciona todo esto ahora y por qué actualiza el Puerto 3000?
-A partir de que guardes y recargues la web, la herramienta tiene dos "cerebros":
-
-El flujo de conexión inicial (La primera vez):
-Cuando un usuario nuevo haga clic en la nube, el frontend (app.js) detectará que no hay configuración previa. Le pedirá un Token de GitHub y un nombre. Esto se envía a server.js (/api/git-init). El servidor usa la API oficial de GitHub para crear un repositorio privado real. Luego, se mete literalmente en la carpeta del puerto 3000 (gracias a que le pasamos la instrucción { cwd: ROOT_DIR }, donde ROOT_DIR es tu proyecto de React, no el asistente), inicializa Git ahí adentro, lo conecta con el repositorio recién creado en la nube y sube todo el código.
-
-El flujo del día a día (Las veces siguientes):
-Una vez vinculado, la herramienta se acuerda. Si tocas la nube manualmente, simplemente ejecuta un commit y un push apuntando nuevamente a { cwd: ROOT_DIR } (tu proyecto React).
-
-El Piloto Automático (La casilla "Auto"):
-Si marcas la casilla de "Auto", el frontend empieza a escuchar a tu radar de archivos (/api/live-reload). Cada vez que en Antigravity IDE presionas Ctrl+S (editando ComparePlayersBI.js u otro), el radar recarga el iframe y arranca una cuenta regresiva invisible de 10 segundos (la nube se pone color naranja). Si sigues programando y vuelves a guardar en el segundo 8, la cuenta se reinicia a 10. Cuando por fin dejas de guardar por 10 segundos seguidos, la cuenta llega a 0 y dispara sola un "clic" en la nube. Todo
+1. **Modo Conversacional vs Modificación:** Si el usuario hace una pregunta, la IA responde y habla mediante `window.speechSynthesis` (instantáneo).
+2. **Confirmaciones Restrictivas:** Si la IA planea modificar, crear o eliminar un archivo, su *System Prompt* la obliga a inyectar la etiqueta `[REQUIERE_CONFIRMACION]`. El backend entra en pausa y el usuario debe autorizar ("Sí", "Dale") para que los cambios se efectúen en el disco duro.
+3. **Integración Git Automatizada:** Tras 10 segundos de inactividad luego de guardar archivos, el sistema dispara automáticamente un commit y un push al repositorio privado de GitHub del cliente, manteniendo un backup constante y silencioso.
