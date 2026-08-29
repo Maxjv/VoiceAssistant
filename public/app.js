@@ -2483,46 +2483,43 @@ try {
     console.error("No se pudo conectar al Live Reload:", e);
 }
 
+// ==========================================
+// L√ìGICA DE INICIALIZAR PROYECTO REACT
+// ==========================================
+const btnInitReact = document.getElementById('btnInitReact');
+const initReactModal = document.getElementById('initReactModal');
+const cancelInitReactBtn = document.getElementById('cancelInitReactBtn');
+const confirmInitReactBtn = document.getElementById('confirmInitReactBtn');
 
- / /   = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = 
- / /   L ” G I C A   D E   I N I C I A L I Z A R   P R O Y E C T O   R E A C T 
- / /   = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = 
- c o n s t   b t n I n i t R e a c t   =   d o c u m e n t . g e t E l e m e n t B y I d ( ' b t n I n i t R e a c t ' ) ; 
- c o n s t   i n i t R e a c t M o d a l   =   d o c u m e n t . g e t E l e m e n t B y I d ( ' i n i t R e a c t M o d a l ' ) ; 
- c o n s t   c a n c e l I n i t R e a c t B t n   =   d o c u m e n t . g e t E l e m e n t B y I d ( ' c a n c e l I n i t R e a c t B t n ' ) ; 
- c o n s t   c o n f i r m I n i t R e a c t B t n   =   d o c u m e n t . g e t E l e m e n t B y I d ( ' c o n f i r m I n i t R e a c t B t n ' ) ; 
- 
- i f   ( b t n I n i t R e a c t )   { 
-         b t n I n i t R e a c t . a d d E v e n t L i s t e n e r ( ' c l i c k ' ,   ( )   = >   { 
-                 i n i t R e a c t M o d a l . c l a s s L i s t . r e m o v e ( ' h i d d e n ' ) ; 
-         } ) ; 
- } 
- i f   ( c a n c e l I n i t R e a c t B t n )   { 
-         c a n c e l I n i t R e a c t B t n . a d d E v e n t L i s t e n e r ( ' c l i c k ' ,   ( )   = >   { 
-                 i n i t R e a c t M o d a l . c l a s s L i s t . a d d ( ' h i d d e n ' ) ; 
-         } ) ; 
- } 
- i f   ( c o n f i r m I n i t R e a c t B t n )   { 
-         c o n f i r m I n i t R e a c t B t n . a d d E v e n t L i s t e n e r ( ' c l i c k ' ,   ( )   = >   { 
-                 i n i t R e a c t M o d a l . c l a s s L i s t . a d d ( ' h i d d e n ' ) ; 
-                 s h o w A c t i o n S t a t u s ( ' I n i c i a l i z a n d o . . . ' ,   ' b o l t ' ) ; 
-                 
-                 f e t c h ( ' / a p i / i n i t - r e a c t ' ,   {   m e t h o d :   ' P O S T '   } ) 
-                         . t h e n ( r e s   = >   r e s . j s o n ( ) ) 
-                         . t h e n ( d a t a   = >   { 
-                                 i f ( d a t a . s u c c e s s )   { 
-                                         a d d T r a n s c r i p t T e x t ( ' S e   a b r i Û   u n a   v e n t a n a   p a r a   i n s t a l a r   R e a c t .   E l   p a n e l   l o   d e t e c t a r ·   c u a n d o   f i n a l i c e . ' ,   ' a i ' ) ; 
-                                         s e t T i m e o u t ( ( )   = >   h i d e A c t i o n S t a t u s ( ) ,   3 0 0 0 ) ; 
-                                 }   e l s e   { 
-                                         a l e r t ( ' E r r o r :   '   +   d a t a . e r r o r ) ; 
-                                         h i d e A c t i o n S t a t u s ( ) ; 
-                                 } 
-                         } ) 
-                         . c a t c h ( e r r   = >   { 
-                                 a l e r t ( ' E r r o r   d e   c o n e x i Û n ' ) ; 
-                                 h i d e A c t i o n S t a t u s ( ) ; 
-                         } ) ; 
-         } ) ; 
- } 
-  
- 
+if (btnInitReact) {
+    btnInitReact.addEventListener('click', () => {
+        initReactModal.classList.remove('hidden');
+    });
+}
+if (cancelInitReactBtn) {
+    cancelInitReactBtn.addEventListener('click', () => {
+        initReactModal.classList.add('hidden');
+    });
+}
+if (confirmInitReactBtn) {
+    confirmInitReactBtn.addEventListener('click', () => {
+        initReactModal.classList.add('hidden');
+        showActionStatus('Inicializando...', 'bolt');
+        
+        fetch('/api/init-react', { method: 'POST' })
+            .then(res => res.json())
+            .then(data => {
+                if(data.success) {
+                    addTranscriptText('Se abri√≥ una ventana para instalar React. El panel lo detectar√° cuando finalice.', 'ai');
+                    setTimeout(() => hideActionStatus(), 3000);
+                } else {
+                    alert('Error: ' + data.error);
+                    hideActionStatus();
+                }
+            })
+            .catch(err => {
+                alert('Error de conexi√≥n');
+                hideActionStatus();
+            });
+    });
+}
