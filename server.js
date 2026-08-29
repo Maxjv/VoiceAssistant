@@ -199,12 +199,39 @@ app.use((req, res, next) => {
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 const ROOT_DIR = process.env.CONTEXT_PATH || process.env.PROJECT_ROOT || process.cwd();
 
-// --- INICIO SISTEMA DE LICENCIAS (TRIAL DE 14 DÍAS) ---
+// --- INICIO SISTEMA DE LICENCIAS (TRIAL DE 7 DÍAS) ---
 const LICENSE_FILE = path.join(BASE_DIR, '.tfte_license.json');
-const TRIAL_DAYS = 14;
+const TRIAL_DAYS = 7;
 
-function getLicenseStatus() {
-    let hwId = 'HWID-' + os.hostname();
+const crypto = require('crypto');
+
+// Variable para cache de licencia
+let cachedLicenseStatus = null;
+let lastLicenseCheck = 0;
+
+async function getLicenseStatus() {
+    // Si estamos en entorno de desarrollo local, bypass total de la licencia
+    if (process.env.ENV === 'development') {
+        return { status: 'pro', daysLeft: 999, isPro: true };
+    }
+
+    // Obtener MAC Address para vincular la licencia a hardware real
+    const interfaces = os.networkInterfaces();
+    let macs = [];
+    for (const key in interfaces) {
+        for (const net of interfaces[key]) {
+            if (net.mac && net.mac !== '00:00:00:00:00:00') {
+                macs.push(net.mac);
+            }
+        }
+    }
+    const rawMacs = macs.sort().join('|') || os.hostname();
+    const hwId = 'HWID-' + crypto.createHash('sha256').update(rawMacs).digest('hex').substring(0, 16);
+
+    // Usar caché si han pasado menos de 5 minutos
+    if (cachedLicenseStatus && (Date.now() - lastLicenseCheck < 5 * 60 * 1000)) {
+        return cachedLicenseStatus;
+    }
 
     if (!fs.existsSync(LICENSE_FILE)) {
         const initialState = {
@@ -214,35 +241,67 @@ function getLicenseStatus() {
             licenseKey: null
         };
         fs.writeFileSync(LICENSE_FILE, JSON.stringify(initialState, null, 2), 'utf8');
-        return { status: 'active', daysLeft: TRIAL_DAYS, isPro: false };
     }
 
     const data = JSON.parse(fs.readFileSync(LICENSE_FILE, 'utf8'));
-    if (data.isPro) return { status: 'pro', daysLeft: 0, isPro: true };
 
-    const start = new Date(data.startDate);
-    const now = new Date();
-    const diffTime = Math.abs(now - start);
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    const daysLeft = TRIAL_DAYS - diffDays;
-
-    if (daysLeft <= 0) {
-        return { status: 'expired', daysLeft: 0, isPro: false };
+    // Validación externa contra Base de Datos Central
+    try {
+        const LICENSE_SERVER_URL = process.env.LICENSE_SERVER_URL || 'http://localhost:3000/api/license/verify';
+        const res = await fetch(LICENSE_SERVER_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ hwid: hwId })
+        });
+        const serverStatus = await res.json();
+        
+        if (serverStatus.valid) {
+            data.isPro = true;
+            fs.writeFileSync(LICENSE_FILE, JSON.stringify(data, null, 2), 'utf8');
+            cachedLicenseStatus = { status: 'pro', daysLeft: 0, isPro: true, message: serverStatus.message };
+            lastLicenseCheck = Date.now();
+            return cachedLicenseStatus;
+        } else {
+            // Si el servidor dice que no es válida, revocamos
+            if (data.isPro) {
+                data.isPro = false;
+                fs.writeFileSync(LICENSE_FILE, JSON.stringify(data, null, 2), 'utf8');
+            }
+        }
+    } catch (e) {
+        // Silencioso, seguimos con validación local si el server está caído
     }
 
-    return { status: 'active', daysLeft, isPro: false };
+    if (data.isPro) {
+        cachedLicenseStatus = { status: 'pro', daysLeft: 0, isPro: true };
+    } else {
+        const start = new Date(data.startDate);
+        const now = new Date();
+        const diffTime = Math.abs(now - start);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        const daysLeft = TRIAL_DAYS - diffDays;
+
+        if (daysLeft <= 0) {
+            cachedLicenseStatus = { status: 'expired', daysLeft: 0, isPro: false };
+        } else {
+            cachedLicenseStatus = { status: 'active', daysLeft, isPro: false };
+        }
+    }
+    
+    lastLicenseCheck = Date.now();
+    return cachedLicenseStatus;
 }
 
-function licenseMiddleware(req, res, next) {
-    const status = getLicenseStatus();
+async function licenseMiddleware(req, res, next) {
+    const status = await getLicenseStatus();
     if (status.status === 'expired') {
-        return res.status(403).json({ error: 'Tu periodo de prueba de 14 días ha expirado. Por favor, adquiere una licencia para continuar.' });
+        return res.status(403).json({ error: 'Tu periodo de prueba ha expirado. Por favor, adquiere una licencia para continuar.' });
     }
     next();
 }
 
-app.get('/api/license/status', (req, res) => {
-    res.json(getLicenseStatus());
+app.get('/api/license/status', async (req, res) => {
+    res.json(await getLicenseStatus());
 });
 
 app.post('/api/license/verify', (req, res) => {
@@ -287,12 +346,14 @@ app.use(express.json());
 // CORRECCIÓN ENOENT: Usamos __dirname para leer el frontend de adentro del .exe
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.use('/preview', express.static(ROOT_DIR));
+const PREVIEW_DIR = ROOT_DIR;
+app.use('/preview', express.static(PREVIEW_DIR));
 
 app.use('/react', createProxyMiddleware({
     target: `http://127.0.0.1:${TARGET_PORT}`,
     changeOrigin: true,
-    pathRewrite: { '^/react': '/' }
+    pathRewrite: { '^/react': '/' },
+    ws: true
 }));
 
 app.get('/', (req, res) => {
@@ -301,18 +362,21 @@ app.get('/', (req, res) => {
 });
 
 app.get('/api/get-context', (req, res) => {
-    res.json({ contextPath: ROOT_DIR });
+    res.json({ 
+        contextPath: ROOT_DIR,
+        projectName: process.env.PROJECT_NAME || 'React App'
+    });
 });
 
 app.post('/api/set-context', (req, res) => {
-    const { contextPath } = req.body;
+    const { contextPath, projectName } = req.body;
     if (!contextPath) return res.status(400).json({ error: 'Contexto requerido' });
 
     // Modificar el .env real en disco (usando BASE_DIR)
     const envFile = path.join(BASE_DIR, '.env');
-    let contextChanged = false; // 🔥 SOLUCIÓN AL BUG: Declaramos la variable globalmente aquí
 
     try {
+        let contextChanged = false;
         if (fs.existsSync(envFile)) {
             let envData = fs.readFileSync(envFile, 'utf8');
             if (envData.match(/^CONTEXT_PATH=.*$/m)) {
@@ -325,11 +389,26 @@ app.post('/api/set-context', (req, res) => {
                 envData += `\nCONTEXT_PATH=${contextPath}`;
                 contextChanged = true;
             }
+
+            if (projectName) {
+                if (envData.match(/^PROJECT_NAME=.*$/m)) {
+                    const currentProjectName = envData.match(/^PROJECT_NAME=(.*)$/m)[1];
+                    if (currentProjectName !== projectName) {
+                        envData = envData.replace(/^PROJECT_NAME=.*$/m, `PROJECT_NAME=${projectName}`);
+                        contextChanged = true;
+                    }
+                } else {
+                    envData += `\nPROJECT_NAME=${projectName}`;
+                    contextChanged = true;
+                }
+            }
             if (contextChanged) {
                 fs.writeFileSync(envFile, envData, 'utf8');
             }
         } else {
-            fs.writeFileSync(envFile, `CONTEXT_PATH=${contextPath}\n`, 'utf8');
+            let newEnvData = `CONTEXT_PATH=${contextPath}\n`;
+            if (projectName) newEnvData += `PROJECT_NAME=${projectName}\n`;
+            fs.writeFileSync(envFile, newEnvData, 'utf8');
             contextChanged = true;
         }
 
@@ -346,10 +425,82 @@ app.post('/api/set-context', (req, res) => {
 
     } catch (err) {
         console.error("Error modificando .env:", err);
-        // Evitamos crashear usando return para asegurar que no se envíen headers dobles
-        return res.status(500).json({ error: "No se pudo guardar el nuevo contexto" });
+        res.status(500).json({ error: "No se pudo guardar el nuevo contexto" });
     }
 });
+
+// --- FASE 2.2: CONTROL DINÁMICO ---
+const CONTROL_FILENAME = 'Project_Control.html';
+
+app.get('/api/control/check', (req, res) => {
+    try {
+        if (process.env.ENV === 'development') {
+            return res.json({ exists: true, url: `/preview/${CONTROL_FILENAME}` });
+        }
+        const controlPath = path.join(ROOT_DIR, CONTROL_FILENAME);
+        if (fs.existsSync(controlPath)) {
+            res.json({ exists: true, url: `/preview/${CONTROL_FILENAME}` });
+        } else {
+            res.json({ exists: false });
+        }
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post('/api/control/create', (req, res) => {
+    try {
+        const controlPath = path.join(BASE_DIR, CONTROL_FILENAME);
+        const templatePath = path.join(__dirname, 'public', 'Control_Template.html');
+        
+        let templateHtml = '';
+        if (fs.existsSync(templatePath)) {
+            templateHtml = fs.readFileSync(templatePath, 'utf-8');
+        } else {
+            templateHtml = `<!DOCTYPE html><html><body><h2>Error</h2><p>No se encontró Control_Template.html</p></body></html>`;
+        }
+
+        if (!fs.existsSync(controlPath)) {
+            fs.writeFileSync(controlPath, templateHtml, 'utf-8');
+        }
+        
+        res.json({ ok: true, url: `/control-board` });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post('/api/control/save', express.json(), (req, res) => {
+    try {
+        const controlPath = path.join(BASE_DIR, CONTROL_FILENAME);
+        if (fs.existsSync(controlPath)) {
+            let content = fs.readFileSync(controlPath, 'utf-8');
+            const dataStr = JSON.stringify(req.body.data || [], null, 2);
+            content = content.replace(/let\s+controlData\s*=\s*\[[\s\S]*?\]\s*;/m, `let controlData = ${dataStr};`);
+            fs.writeFileSync(controlPath, content, 'utf-8');
+            res.json({ ok: true });
+        } else {
+            res.status(404).json({ error: 'Control no encontrado' });
+        }
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+app.get('/api/check-control', (req, res) => {
+    const controlPath = path.join(BASE_DIR, CONTROL_FILENAME);
+    res.json({ exists: fs.existsSync(controlPath) });
+});
+
+app.get('/control-board', (req, res) => {
+    const controlPath = path.join(BASE_DIR, CONTROL_FILENAME);
+    if (fs.existsSync(controlPath)) {
+        res.sendFile(controlPath);
+    } else {
+        res.status(404).send('No se ha creado el entorno de control.');
+    }
+});
+
+// -----------------------------------
 
 let ttsClient = null;
 async function getTtsClient() {
@@ -381,22 +532,31 @@ app.get('/api/tts', async (req, res) => {
     }
 });
 
-const FRONTIMGS_DIR = path.join(ROOT_DIR, 'FrontImgs');
 const IMG_EXT = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg']);
 
 app.get('/api/browse', (req, res) => {
     const rel = (req.query.dir || '').replace(/^[/\\]+/, '');
-    const target = path.resolve(FRONTIMGS_DIR, rel);
-    if (!target.startsWith(FRONTIMGS_DIR)) return res.status(400).json({ error: 'Fuera de FrontImgs' });
+    const target = path.resolve(ROOT_DIR, rel);
+    if (!target.startsWith(ROOT_DIR)) return res.status(400).json({ error: 'Ruta inválida' });
 
     try {
         const entries = fs.readdirSync(target, { withFileTypes: true });
-        const folders = entries.filter(e => e.isDirectory()).map(e => e.name).sort();
-        const images = entries
-            .filter(e => e.isFile() && IMG_EXT.has(path.extname(e.name).toLowerCase()))
-            .map(e => e.name)
-            .sort();
-        res.json({ dir: rel, folders, images });
+        let folders = [];
+        let images = [];
+        
+        const isRoot = rel === '';
+        
+        for (const e of entries) {
+            if (e.name === 'node_modules' || e.name === '.git' || e.name === '.next' || e.name === 'dist') continue;
+            
+            if (e.isDirectory()) {
+                folders.push(e.name);
+            } else if (e.isFile() && IMG_EXT.has(path.extname(e.name).toLowerCase())) {
+                images.push(e.name);
+            }
+        }
+        
+        res.json({ dir: rel, folders: folders.sort(), images: images.sort() });
     } catch (e) {
         res.status(404).json({ error: 'No se pudo leer: ' + e.message });
     }
@@ -605,27 +765,50 @@ app.get('/api/agente/estado', (req, res) => {
 
 app.get('/api/agente/plan', (req, res) => {
     try {
-        const brainDir = path.join(os.homedir(), '.gemini', 'antigravity-ide', 'brain');
-        if (!fs.existsSync(brainDir)) {
-            return res.json({ plan: "No se encontró el directorio brain de Antigravity." });
+        if (process.env.ENV === 'development') {
+            const devPlanPath = path.join(BASE_DIR, 'VoiceAssistant_Plan.html');
+            if (fs.existsSync(devPlanPath)) {
+                return res.json({ plan: fs.readFileSync(devPlanPath, 'utf-8') });
+            }
         }
-
-        const convDirs = fs.readdirSync(brainDir, { withFileTypes: true })
-            .filter(dirent => dirent.isDirectory())
-            .map(dirent => dirent.name);
 
         let latestPlanPath = null;
         let latestMtime = 0;
 
-        for (const dirName of convDirs) {
-            const planPath = path.join(brainDir, dirName, 'implementation_plan.md');
-            if (fs.existsSync(planPath)) {
-                const stat = fs.statSync(planPath);
-                if (stat.mtimeMs > latestMtime) {
-                    latestMtime = stat.mtimeMs;
-                    latestPlanPath = planPath;
+        // 1. Buscar en ROOT_DIR/.brain (Contexto local del proyecto)
+        const localBrainDirs = [
+            path.join(ROOT_DIR, '.brain'),
+            path.join(BASE_DIR, '.brain') // Fallback al directorio de instalación (AppData)
+        ];
+
+        for (const localBrainDir of localBrainDirs) {
+            if (fs.existsSync(localBrainDir)) {
+                // Asumimos que puede haber un implementation_plan.md directo o en subcarpetas
+                const directPlan = path.join(localBrainDir, 'implementation_plan.md');
+                if (fs.existsSync(directPlan)) {
+                    latestPlanPath = directPlan;
+                    latestMtime = fs.statSync(directPlan).mtimeMs;
+                } else {
+                    const subDirs = fs.readdirSync(localBrainDir, { withFileTypes: true })
+                        .filter(dirent => dirent.isDirectory())
+                        .map(dirent => dirent.name);
+                    for (const dirName of subDirs) {
+                        const planPath = path.join(localBrainDir, dirName, 'implementation_plan.md');
+                        if (fs.existsSync(planPath)) {
+                            const stat = fs.statSync(planPath);
+                            if (stat.mtimeMs > latestMtime) {
+                                latestMtime = stat.mtimeMs;
+                                latestPlanPath = planPath;
+                            }
+                        }
+                    }
                 }
             }
+        }
+
+        if (!latestPlanPath) {
+            // No existe plan local en este proyecto ni en la instalación
+            return res.status(404).json({ error: "No se encontraron planes de implementación activos ni en el proyecto local ni en la carpeta de instalación." });
         }
 
         if (latestPlanPath) {
@@ -634,12 +817,17 @@ app.get('/api/agente/plan', (req, res) => {
         } else {
             // Fallback a la última respuesta cruda
             const paths = watcherPaths('gemini');
-            const respuesta = fs.existsSync(paths.resp) ? fs.readFileSync(paths.resp, 'utf-8') : 'No hay ningún plan de implementación disponible aún.';
-            res.json({ plan: respuesta });
+            if (fs.existsSync(paths.resp)) {
+                const respuesta = fs.readFileSync(paths.resp, 'utf-8');
+                res.json({ plan: respuesta });
+            } else {
+                // 404 claro para UX amigable
+                res.status(404).json({ error: "No se encontraron planes de implementación activos en este proyecto." });
+            }
         }
     } catch (e) {
         console.error("Error leyendo plan de implementación:", e);
-        res.json({ plan: "Error interno al leer el plan." });
+        res.status(500).json({ error: "Error interno al leer el plan." });
     }
 });
 
@@ -661,7 +849,8 @@ app.get('/api/agente/tareas', (req, res) => {
 
 app.get('/api/tasks/pending', (req, res) => {
     try {
-        const filePath = path.join(ROOT_DIR, 'TFTE Next Steps MainApp 2.html');
+        const PROJECT_ROOT = process.env.PROJECT_ROOT || 'C:\\TFTE';
+        const filePath = path.join(PROJECT_ROOT, 'TFTE Next Steps MainApp 2.html');
         if (!fs.existsSync(filePath)) return res.json([]);
 
         const content = fs.readFileSync(filePath, 'utf-8');
@@ -706,7 +895,8 @@ app.get('/api/tasks/pending', (req, res) => {
 app.post('/api/tasks/complete', express.json(), (req, res) => {
     try {
         const { text, subApp } = req.body;
-        const filePath = path.join(ROOT_DIR, 'TFTE Next Steps MainApp 2.html');
+        const PROJECT_ROOT = process.env.PROJECT_ROOT || 'C:\\TFTE';
+        const filePath = path.join(PROJECT_ROOT, 'TFTE Next Steps MainApp 2.html');
         if (!fs.existsSync(filePath)) return res.status(404).json({ error: "File not found" });
 
         let content = fs.readFileSync(filePath, 'utf-8');
@@ -754,112 +944,37 @@ app.post('/api/tasks/complete', express.json(), (req, res) => {
     }
 });
 
-// ==========================================
-// ENDPOINTS DE GITHUB Y SINCRONIZACIÓN
-// ==========================================
-
-// --- ENDPOINT 1: CREAR REPO E INICIALIZAR (Primera vez) ---
-app.post('/api/git-init', express.json(), async (req, res) => {
+// --- ENDPOINT PARA AUTO-PUSH A GITHUB ---
+app.post('/api/git-sync', express.json(), (req, res) => {
     try {
-        const { token, repoName } = req.body;
-        if (!token || !repoName) return res.status(400).json({ error: 'Faltan datos.' });
+        const timestamp = new Date().toLocaleString('es-ES');
+        const commitMessage = `Auto-sync via TFTE Voice Assistant: ${timestamp}`;
 
-        // 🔥 CERO HARDCODING: Detección dinámica inteligente de la carpeta de código
-        let gitTargetDir = ROOT_DIR;
-        const srcPath = path.join(ROOT_DIR, 'src');
-        if (fs.existsSync(srcPath) && fs.statSync(srcPath).isDirectory()) {
-            gitTargetDir = srcPath; // Si existe la carpeta src, Git apunta ahí dinámicamente
-        }
+        // Secuencia: Add todo -> Commit -> Push
+        const command = `git add . && git commit -m "${commitMessage}" && git push`;
 
-        const safeRepoName = repoName.trim().replace(/\s+/g, '-');
-
-        // 1. AMNESIA AUTOMÁTICA
-        const gitFolder = path.join(gitTargetDir, '.git');
-        if (fs.existsSync(gitFolder)) {
-            fs.rmSync(gitFolder, { recursive: true, force: true });
-        }
-
-        // 2. AUTO-CREAR .gitignore (Escudo de Computer Vision)
-        const gitignorePath = path.join(gitTargetDir, '.gitignore');
-        const gitignoreContent = `node_modules/\nbuild/\nvenv/\n__pycache__/\n*.pt\n*.weights\n*.onnx\n.env\n*.mp4\n*.avi\n*.mov\n*.mkv\n*.sqlite\n*.sqlite3\n*.db\ndatasets/\nruns/\n`;
-        fs.writeFileSync(gitignorePath, gitignoreContent, 'utf8');
-
-        // 3. Obtener el usuario dueño del Token
-        const userRes = await fetch('https://api.github.com/user', {
-            headers: { 'Authorization': `token ${token}` }
-        });
-        const userData = await userRes.json();
-        if (!userRes.ok) throw new Error('Token de GitHub inválido o expirado.');
-        const username = userData.login;
-
-        // 4. Intentar crear el repositorio
-        const ghRes = await fetch('https://api.github.com/user/repos', {
-            method: 'POST',
-            headers: {
-                'Authorization': `token ${token}`,
-                'Accept': 'application/vnd.github.v3+json',
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ name: safeRepoName, private: true })
-        });
-
-        let cloneUrl = '';
-        if (ghRes.ok) {
-            const ghData = await ghRes.json();
-            cloneUrl = ghData.clone_url.replace('https://', `https://${token}@`);
-        } else if (ghRes.status === 422) {
-            cloneUrl = `https://${token}@github.com/${username}/${safeRepoName}.git`;
-        } else {
-            const ghData = await ghRes.json();
-            throw new Error(ghData.message || 'Error en GitHub API');
-        }
-
-        // 5. Iniciar Git y subir (Se ejecuta en la ruta dinámica resuelta)
-        const cmd = `git init && git config user.name "TFTE Auto-Sync" && git config user.email "bot@tfte.local" && git add . && git commit -m "Initial commit via TFTE Voice Assistant" && git branch -M main && git remote add origin "${cloneUrl}" && git push -u origin main`;
-
-        exec(cmd, { cwd: gitTargetDir }, (error, stdout, stderr) => {
-            if (error && !stderr.includes('already exists')) {
-                console.error("\n❌ ERROR DETALLADO DE GITHUB:");
-                console.error(stderr);
-                return res.status(500).json({ error: 'Revisa la terminal de Node.', details: stderr });
+        exec(command, { cwd: __dirname }, (error, stdout, stderr) => {
+            if (error) {
+                const output = (stdout + stderr).toLowerCase();
+                // Si falla porque no hay cambios, no es un error real
+                if (output.includes('nothing to commit') || output.includes('nada para hacer commit') || output.includes('clean')) {
+                    return res.json({ ok: true, message: 'El repositorio ya está actualizado. No hay cambios nuevos para subir.' });
+                }
+                console.error('Git sync error:', error);
+                return res.status(500).json({ ok: false, error: 'Fallo al subir a GitHub. Revisa la consola.', details: stderr });
             }
-            res.json({ ok: true, message: '¡Repositorio inicializado y código subido con éxito!' });
+            res.json({ ok: true, message: '¡Código sincronizado con GitHub exitosamente!' });
         });
     } catch (e) {
-        console.error("Error en Git Init:", e);
+        console.error("Error en Git Sync:", e);
         res.status(500).json({ error: e.message });
     }
 });
-
-// --- ENDPOINT 2: SINCRONIZAR REPO (Actualizaciones futuras) ---
-app.post('/api/git-sync', async (req, res) => {
-    try {
-        // 🔥 CERO HARDCODING: Detección dinámica
-        let gitTargetDir = ROOT_DIR;
-        const srcPath = path.join(ROOT_DIR, 'src');
-        if (fs.existsSync(srcPath) && fs.statSync(srcPath).isDirectory()) {
-            gitTargetDir = srcPath;
-        }
-
-        const cmd = `git add . && git commit -m "Auto-sync update via TFTE" && git push origin main`;
-
-        exec(cmd, { cwd: gitTargetDir }, (error, stdout, stderr) => {
-            if (error && !stdout.includes('nothing to commit') && !stderr.includes('nothing to commit')) {
-                console.error("\n❌ ERROR DETALLADO DE GITHUB (SYNC):", stderr);
-                return res.status(500).json({ error: 'Fallo al sincronizar', details: stderr });
-            }
-            res.json({ ok: true, message: 'Código sincronizado en la nube.' });
-        });
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
-});
-
-
 
 app.post('/api/save-next-steps', express.json(), (req, res) => {
     try {
-        const filePath = path.join(ROOT_DIR, 'TFTE Next Steps MainApp 2.html');
+        const PROJECT_ROOT = process.env.PROJECT_ROOT || 'C:\\TFTE';
+        const filePath = path.join(PROJECT_ROOT, 'TFTE Next Steps MainApp 2.html');
         if (!fs.existsSync(filePath)) {
             return res.status(404).json({ error: "File not found" });
         }
@@ -911,7 +1026,8 @@ app.get('/api/historial', (req, res) => {
 
 const catchAllProxy = createProxyMiddleware({
     target: `http://127.0.0.1:${TARGET_PORT}`,
-    changeOrigin: true
+    changeOrigin: true,
+    ws: true
 });
 
 // Forzamos que el proxy NUNCA intercepte el frontend
@@ -944,9 +1060,11 @@ let reloadTimeout;
 
 try {
     fs.watch(watchPath, { recursive: true }, (eventType, filename) => {
+        if (!filename) return;
+        if (filename.includes('node_modules') || filename.includes('.git') || filename.includes('VoiceAssistant')) return;
         if (filename && (filename.endsWith('.js') || filename.endsWith('.jsx') || filename.endsWith('.tsx') || filename.endsWith('.ts') || filename.endsWith('.css') || filename.endsWith('.html'))) {
             // Ignorar node_modules y archivos de build
-            if (filename.includes('node_modules') || filename.includes('.next') || filename.includes('build')) return;
+            if (filename.includes('.next') || filename.includes('build')) return;
             clearTimeout(reloadTimeout);
             reloadTimeout = setTimeout(() => {
                 console.log(`[Live Reload] Archivo modificado: ${filename} -> Actualizando radar...`);
@@ -960,6 +1078,68 @@ try {
 }
 
 // ==========================================
+// FASE 3.2: NOTIFICACIÓN POR CORREO (NUEVA URL)
+// ==========================================
+try {
+    const urlFilePath = path.join(BASE_DIR, 'current-url.txt');
+    let lastKnownUrl = '';
+    
+    if (fs.existsSync(urlFilePath)) {
+        lastKnownUrl = fs.readFileSync(urlFilePath, 'utf-8').trim();
+    }
+
+    setInterval(async () => {
+        try {
+            if (!fs.existsSync(urlFilePath)) return;
+            
+            const newUrl = fs.readFileSync(urlFilePath, 'utf-8').trim();
+            if (newUrl && newUrl !== lastKnownUrl) {
+                lastKnownUrl = newUrl;
+                console.log(`[Sistema] Nueva URL detectada: ${newUrl}. Preparando correo...`);
+                
+                const targetEmail = process.env.USER_EMAIL || process.env.NOTIFY_EMAIL;
+                if (!targetEmail) {
+                    console.log("[Sistema] No se configuró USER_EMAIL en .env. Omitiendo envío de correo.");
+                    return;
+                }
+
+                try {
+                    const nodemailer = require('nodemailer');
+                    // Configurar transporter 
+                    const transporter = nodemailer.createTransport({
+                        host: process.env.SMTP_HOST || 'smtp.ethereal.email',
+                        port: process.env.SMTP_PORT || 587,
+                        secure: false, // true for 465, false for other ports
+                        tls: { rejectUnauthorized: false },
+                        auth: {
+                            user: process.env.SMTP_USER || 'fake@ethereal.email',
+                            pass: process.env.SMTP_PASS || 'fakepass'
+                        }
+                    });
+
+                    await transporter.sendMail({
+                        from: '"TFTE Assistant" <' + (process.env.SMTP_USER || 'no-reply@tfte.local') + '>',
+                        to: targetEmail,
+                        subject: "Túnel Restaurado: Nueva URL de TFTE Assistant",
+                        text: `El sistema ha sido reiniciado.\n\nNueva URL de acceso: ${newUrl}\n\nPor favor, actualiza tu navegador.`,
+                        html: `<h2>TFTE Assistant en Línea</h2>
+                               <p>El sistema de resiliencia ha restaurado la conexión.</p>
+                               <p>Tu nueva URL de acceso es: <br/><b><a href="${newUrl}">${newUrl}</a></b></p>`
+                    });
+                    console.log(`[Sistema] Correo enviado exitosamente a ${targetEmail}`);
+                } catch (err) {
+                    console.error("[Sistema] Error enviando correo (Fase 3.2):", err.message);
+                }
+            }
+        } catch (err2) {
+            // ignorar errores de lectura temporal
+        }
+    }, 2000);
+} catch (err) {
+    console.error("[Sistema] Error configurando notificaciones (Fase 3.2):", err.message);
+}
+
+// ==========================================
 // ARRANQUE DEL SERVIDOR
 // ==========================================
 const server = app.listen(port, () => {
@@ -967,11 +1147,8 @@ const server = app.listen(port, () => {
 });
 
 server.on('upgrade', (req, socket, head) => {
-    console.log(`[WS Upgrade] ${req.url}`);
-    // Reescribir /react/* a /* para que llegue al React dev server
-    if (req.url.startsWith('/react/') || req.url.startsWith('/react?')) {
+    if (req.url.startsWith('/react/')) {
         req.url = req.url.replace('/react', '');
     }
-    // Enviar TODOS los WebSocket upgrades al React dev server (HMR usa /ws)
     catchAllProxy.upgrade(req, socket, head);
 });

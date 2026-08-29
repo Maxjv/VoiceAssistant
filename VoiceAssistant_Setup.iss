@@ -11,14 +11,19 @@ DisableDirPage=yes
 LicenseFile=licencia.txt 
 
 [Files]
-Source: "VoiceAssistant_TFTE.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "cloudflared.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "watchdog.ps1"; DestDir: "{app}"; Flags: ignoreversion
-Source: "watcher\*"; DestDir: "{app}\watcher"; Flags: ignoreversion recursesubdirs
-Source: "node_modules\*"; DestDir: "{app}\node_modules"; Flags: ignoreversion recursesubdirs
+Source: "dist_production\VoiceAssistant_TFTE.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "dist_production\node.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "dist_production\cloudflared.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "dist_production\watchdog.ps1"; DestDir: "{app}"; Flags: ignoreversion
+Source: "dist_production\rescue.ps1"; DestDir: "{app}"; Flags: ignoreversion
+Source: "dist_production\rescue.bat"; DestDir: "{app}"; Flags: ignoreversion
+Source: "dist_production\watcher\*"; DestDir: "{app}\watcher"; Flags: ignoreversion recursesubdirs
+Source: "dist_production\public\*"; DestDir: "{app}\public"; Flags: ignoreversion recursesubdirs
+Source: "dist_production\node_modules\*"; DestDir: "{app}\node_modules"; Flags: ignoreversion recursesubdirs
 
 [Icons]
 Name: "{autoprograms}\TFTE Voice Assistant"; Filename: "powershell.exe"; Parameters: "-ExecutionPolicy Bypass -WindowStyle Hidden -File ""{app}\launcher.ps1"""; IconFilename: "{app}\VoiceAssistant_TFTE.exe"
+Name: "{userdesktop}\Modo Rescate TFTE"; Filename: "{app}\Tfte_Rescue_Panel.pyw"; IconFilename: "{app}\VoiceAssistant_TFTE.exe"
 
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}\node_modules"
@@ -28,10 +33,16 @@ Type: files; Name: "{app}\current-url.txt"
 Type: files; Name: "{app}\launcher.ps1"
 Type: files; Name: "{app}\*.log"
 Type: files; Name: "{app}\stop.txt"
+Type: files; Name: "{app}\.tfte_license.json"
+Type: files; Name: "{app}\open_browser.ps1"
+Type: files; Name: "{app}\start_react_temp.bat"
+Type: files; Name: "{app}\Project_Control.html"
+Type: filesandordirs; Name: "{app}\public"
 
 [Code]
 var
   EmailPage: TInputQueryWizardPage;
+  ProjectNamePage: TInputQueryWizardPage;
   ContextPage: TInputDirWizardPage;
   ApiKeyPage: TWizardPage;
   ApiKeyEdit: TEdit;
@@ -55,7 +66,14 @@ begin
   EmailPage.Add('Tu Identificador:', False);
   EmailPage.Values[0] := 'usuario@tfte.com';
 
-  ContextPage := CreateInputDirPage(EmailPage.ID,
+  ProjectNamePage := CreateInputQueryPage(EmailPage.ID,
+    'Nombre del Proyecto',
+    'Personaliza tu Asistente',
+    'Introduce el nombre de la aplicacion que vas a diseñar.');
+  ProjectNamePage.Add('Nombre del Proyecto:', False);
+  ProjectNamePage.Values[0] := 'Mi Aplicacion Web';
+
+  ContextPage := CreateInputDirPage(ProjectNamePage.ID,
     'Carpeta de Trabajo', 'Selecciona el entorno de trabajo',
     'Pulsa "Examinar" para buscar la carpeta de tu proyecto. El sistema detectara la raiz de React automaticamente.',
     False, '');
@@ -103,6 +121,15 @@ begin
     end;
   end;
 
+  if CurPageID = ProjectNamePage.ID then
+  begin
+    if Trim(ProjectNamePage.Values[0]) = '' then
+    begin
+      MsgBox('El nombre del proyecto es obligatorio.', mbError, MB_OK);
+      Result := False;
+    end;
+  end;
+
   if CurPageID = ContextPage.ID then
   begin
     if not DirExists(Trim(ContextPage.Values[0])) then
@@ -125,7 +152,7 @@ end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
 var
-  EnvContent, LauncherScript: String;
+  EnvContent, LauncherScript, OpenBrowserScript: String;
   ResultCode: Integer;
 begin
   if CurStep = ssPostInstall then
@@ -133,9 +160,15 @@ begin
     EnvContent := 'PORT=4000' + #13#10 +
                   'PROJECT_ROOT=' + ExpandConstant('{app}') + #13#10 +
                   'CONTEXT_PATH=' + Trim(ContextPage.Values[0]) + #13#10 +
+                  'PROJECT_NAME=' + Trim(ProjectNamePage.Values[0]) + #13#10 +
                   'USER_EMAIL=' + Trim(EmailPage.Values[0]) + #13#10 +
                   'GROQ_API_KEY=' + UserApiKey + #13#10 +
-                  'ACCESS_PIN=1234';
+                  'ACCESS_PIN=1234' + #13#10 +
+                  'SMTP_HOST=smtp.gmail.com' + #13#10 +
+                  'SMTP_PORT=587' + #13#10 +
+                  'SMTP_USER=tfte.voiceassist@gmail.com' + #13#10 +
+                  'SMTP_PASS=lgvfryvfniklizay' + #13#10 +
+                  'ENV=production';
     SaveStringToFile(ExpandConstant('{app}\.env'), EnvContent, False);
 
     // LANZADOR VISUAL INTEGRADO
@@ -165,26 +198,35 @@ begin
                       '    }' + #13#10 +
                       '}' + #13#10 +
                       'if ($url) {' + #13#10 +
-                      '    Write-Host " [EXITO] Tunel conectado. Abriendo navegador..." -ForegroundColor Cyan' + #13#10 +
-                      '    $context = ""' + #13#10 +
-                      '    $envPath = Join-Path $root ".env"' + #13#10 +
-                      '    if (Test-Path $envPath) {' + #13#10 +
-                      '        $match = Get-Content $envPath | Where-Object { $_ -match "^CONTEXT_PATH=(.*)$" }' + #13#10 +
-                      '        if ($match) { $context = $match -replace "^CONTEXT_PATH=","" }' + #13#10 +
-                      '    }' + #13#10 +
-                      '    Start-Process "$url/?context=$context"' + #13#10 +
+                      '    Write-Host " [EXITO] Tunel conectado." -ForegroundColor Cyan' + #13#10 +
                       '} else {' + #13#10 +
                       '    Write-Host " [ERROR] Fallo Cloudflare." -ForegroundColor Red' + #13#10 +
                       '}';
     SaveStringToFile(ExpandConstant('{app}\launcher.ps1'), LauncherScript, False);
 
+    // SCRIPT ROBUSTO PARA ABRIR NAVEGADOR
+    OpenBrowserScript := '$root = $PSScriptRoot' + #13#10 +
+                         '$urlPath = Join-Path $root "current-url.txt"' + #13#10 +
+                         'if (Test-Path $urlPath) { $url = Get-Content $urlPath } else { exit }' + #13#10 +
+                         '$context = ""' + #13#10 +
+                         '$envPath = Join-Path $root ".env"' + #13#10 +
+                         'if (Test-Path $envPath) {' + #13#10 +
+                         '    $match = Get-Content $envPath | Where-Object { $_ -match "^CONTEXT_PATH=(.*)$" }' + #13#10 +
+                         '    if ($match) { $context = $match -replace "^CONTEXT_PATH=","" }' + #13#10 +
+                         '}' + #13#10 +
+                         'Start-Process "$url/?context=$context"';
+    SaveStringToFile(ExpandConstant('{app}\open_browser.ps1'), OpenBrowserScript, False);
+
     // Esperar a que el lanzador termine de obtener la URL de Cloudflare antes de mostrar el mensaje final
     Exec('powershell.exe', ExpandConstant('-ExecutionPolicy Bypass -WindowStyle Hidden -File "{app}\launcher.ps1"'), '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
 
     MsgBox('¡Instalacion completada con exito!' + #13#10#13#10 +
-           'El Asistente ya esta abriendo tu navegador. El proyecto tardara unos instantes en compilar en segundo plano.' + #13#10#13#10 +
+           'El Asistente esta listo. El proyecto tardara unos instantes en compilar en segundo plano.' + #13#10#13#10 +
            '🔒 IMPORTANTE: El PIN de seguridad para acceder a la interfaz es: 1234' + #13#10#13#10 +
-           'En el futuro puedes abrir el Asistente buscando "TFTE Voice Assistant" en el Menu de Inicio de Windows.', mbInformation, MB_OK);
+           'Al presionar Aceptar, se abrira tu navegador.', mbInformation, MB_OK);
+
+    // Lanzar el navegador al instante de hacer clic en OK usando el script robusto
+    Exec('powershell.exe', ExpandConstant('-ExecutionPolicy Bypass -WindowStyle Hidden -File "{app}\open_browser.ps1"'), '', SW_HIDE, ewNoWait, ResultCode);
   end;
 end;
 

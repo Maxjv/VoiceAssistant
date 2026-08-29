@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Constructor Visual de Control</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+    <style>
+        :root {
+            --bg-base: #020617;
+            --bg-panel: #0f172a;
+            --bg-card: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #38bdf8;
+            --accent-hover: #0284c7;
+            --border: #334155;
+            --danger: #ef4444;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Sidebar / Palette */
+        .palette {
+            width: 280px;
+            background: var(--bg-panel);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            box-sizing: border-box;
+            z-index: 10;
+        }
+
+        .palette h2 {
+            margin: 0 0 20px 0;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .palette-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .palette-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            padding: 10px;
+            border-radius: 8px;
+            cursor: grab;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            transition: all 0.2s ease;
+            user-select: none;
+            font-size: 0.9rem;
+            text-align: center;
+        }
+
+        .palette-item:hover {
+            border-color: var(--accent);
+            transform: translateY(-2px);
+        }
+
+        /* Canvas Area */
+        .canvas-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: radial-gradient(circle at center, #0f172a 0%, #020617 100%);
+            position: relative;
+        }
+
+        .toolbar {
+            height: 60px;
+            border-bottom: 1px solid var(--border);
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding: 0 20px;
+            gap: 10px;
+        }
+
+        .btn {
+            background: var(--bg-card);
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .btn.primary {
+            background: var(--accent);
+            color: #020617;
+            border-color: var(--accent);
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+        }
+
+        .canvas {
+            flex: 1;
+            padding: 40px;
+            overflow-y: auto;
+        }
+
+        .dropzone {
+            min-height: 100px;
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.02);
+            transition: all 0.3s ease;
+        }
+
+        .dropzone.drag-over {
+            border-color: var(--accent);
+            background: rgba(56, 189, 248, 0.05);
+        }
+
+        .empty-canvas-msg {
+            text-align: center;
+            color: var(--text-muted);
+            margin-top: 40px;
+            font-size: 1.1rem;
+            pointer-events: none;
+        }
+
+        /* Blocks */
+        .block {
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            position: relative;
+        }
+
+        .block-header {
+            padding: 10px 15px;
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            border-radius: 8px 8px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: move;
+        }
+
+        .block-title {
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .block-actions {
+            display: flex;
+            gap: 5px;
+        }
+
+        .block-actions span {
+            cursor: pointer;
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            transition: color 0.2s;
+        }
+        
+        .block-actions span:hover {
+            color: var(--text-main);
+        }
+        .block-actions span.delete:hover {
+            color: var(--danger);
+        }
+
+        .block-content {
+            padding: 15px;
+        }
+
+        .block-content .dropzone {
+            min-height: 60px;
+            padding: 10px;
+            margin-top: 10px;
+        }
+
+        .prop-input {
+            width: 100%;
+            background: var(--bg-base);
+            border: 1px solid var(--border);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            margin-top: 8px;
+            box-sizing: border-box;
+            font-family: inherit;
+        }
+
+        textarea.prop-input {
+            resize: vertical;
+            min-height: 60px;
+        }
+
+        /* Nested indents */
+        .block-type-screen { border-left: 4px solid #8b5cf6; }
+        .block-type-card { border-left: 4px solid #3b82f6; }
+        .block-type-modal { border-left: 4px solid #f59e0b; }
+        .block-type-button { border-left: 4px solid #10b981; }
+        .block-type-list { border-left: 4px solid #ec4899; }
+        .block-type-filter { border-left: 4px solid #06b6d4; }
+
+    </style>
+</head>
+<body>
+
+    <div class="palette">
+        <h2><span class="material-icons-round">category</span> Componentes</h2>
+        <div class="palette-grid">
+            <div class="palette-item" draggable="true" data-type="screen">
+                <span class="material-icons-round" style="color: #8b5cf6;">desktop_windows</span> Screen
+            </div>
+            <div class="palette-item" draggable="true" data-type="card">
+                <span class="material-icons-round" style="color: #3b82f6;">crop_din</span> Card
+            </div>
+            <div class="palette-item" draggable="true" data-type="modal">
+                <span class="material-icons-round" style="color: #f59e0b;">picture_in_picture</span> Modal
+            </div>
+            <div class="palette-item" draggable="true" data-type="list">
+                <span class="material-icons-round" style="color: #ec4899;">format_list_bulleted</span> Lista
+            </div>
+            <div class="palette-item" draggable="true" data-type="filter">
+                <span class="material-icons-round" style="color: #06b6d4;">filter_alt</span> Filtro
+            </div>
+            <div class="palette-item" draggable="true" data-type="button">
+                <span class="material-icons-round" style="color: #10b981;">smart_button</span> Botón
+            </div>
+        </div>
+    </div>
+
+    <div class="canvas-container">
+        <div class="toolbar">
+            <button class="btn primary" id="btnSave"><span class="material-icons-round">save</span> Guardar Tablero</button>
+        </div>
+        <div class="canvas">
+            <div class="dropzone" id="mainCanvas">
+                <div class="empty-canvas-msg">Arrastra componentes aquí para comenzar a construir tu tablero.</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ESTADO DE DATOS (Se guardará en el propio HTML al inyectar)
+        let controlData = []; 
+        /* __DATA_INJECTION_POINT__ */
+
+        const mainCanvas = document.getElementById('mainCanvas');
+        let draggedType = null;
+        let draggedElement = null;
+
+        const icons = {
+            'screen': 'desktop_windows',
+            'card': 'crop_din',
+            'modal': 'picture_in_picture',
+            'list': 'format_list_bulleted',
+            'filter': 'filter_alt',
+            'button': 'smart_button'
+        };
+
+        function initDragAndDrop() {
+            const items = document.querySelectorAll('.palette-item');
+            items.forEach(item => {
+                item.addEventListener('dragstart', (e) => {
+                    draggedType = e.target.getAttribute('data-type');
+                    e.dataTransfer.setData('text/plain', draggedType);
+                });
+            });
+
+            setupDropzone(mainCanvas);
+        }
+
+        function setupDropzone(dz) {
+            dz.addEventListener('dragover', e => {
+                e.preventDefault();
+                e.stopPropagation();
+                dz.classList.add('drag-over');
+            });
+
+            dz.addEventListener('dragleave', e => {
+                e.preventDefault();
+                e.stopPropagation();
+                dz.classList.remove('drag-over');
+            });
+
+            dz.addEventListener('drop', e => {
+                e.preventDefault();
+                e.stopPropagation();
+                dz.classList.remove('drag-over');
+                
+                const type = e.dataTransfer.getData('text/plain');
+                if (!type) return;
+
+                if (draggedElement) {
+                    // Moving an existing block
+                    if (draggedElement !== dz && !draggedElement.contains(dz)) {
+                        dz.appendChild(draggedElement);
+                        if(dz === mainCanvas) updateEmptyMsg();
+                    }
+                    draggedElement = null;
+                } else {
+                    // Creating new block from palette
+                    const block = createBlock(type);
+                    dz.appendChild(block);
+                    if(dz === mainCanvas) updateEmptyMsg();
+                }
+            });
+        }
+
+        function createBlock(type, config = { title: '', instruction: '' }) {
+            const el = document.createElement('div');
+            el.className = `block block-type-${type}`;
+            el.draggable = true;
+            
+            const titleText = type.charAt(0).toUpperCase() + type.slice(1);
+            
+            const showInstruction = type !== 'screen';
+            const instructionHtml = showInstruction 
+                ? `<textarea class="prop-input inst-input" placeholder="Instrucción de la tarea..." rows="2">${config.instruction || ''}</textarea>` 
+                : '';
+            
+            el.innerHTML = `
+                <div class="block-header">
+                    <div class="block-title">
+                        <span class="material-icons-round">${icons[type]}</span> ${titleText}
+                    </div>
+                    <div class="block-actions">
+                        <span class="material-icons-round delete" title="Eliminar">delete</span>
+                    </div>
+                </div>
+                <div class="block-content">
+                    <input type="text" class="prop-input name-input" placeholder="Nombre/Etiqueta del ${titleText}" value="${config.title}">
+                    ${instructionHtml}
+                    ${type !== 'button' && type !== 'filter' ? '<div class="dropzone child-dropzone"></div>' : ''}
+                </div>
+            `;
+
+            el.addEventListener('dragstart', (e) => {
+                e.stopPropagation();
+                draggedElement = el;
+                e.dataTransfer.setData('text/plain', type);
+            });
+
+            const delBtn = el.querySelector('.delete');
+            delBtn.addEventListener('click', () => {
+                el.remove();
+                updateEmptyMsg();
+            });
+
+            const childDz = el.querySelector('.child-dropzone');
+            if (childDz) {
+                setupDropzone(childDz);
+            }
+
+            return el;
+        }
+
+        function updateEmptyMsg() {
+            const msg = mainCanvas.querySelector('.empty-canvas-msg');
+            const hasBlocks = Array.from(mainCanvas.children).some(c => c.classList.contains('block'));
+            if (hasBlocks && msg) {
+                msg.style.display = 'none';
+            } else if (!hasBlocks && msg) {
+                msg.style.display = 'block';
+            } else if (!hasBlocks && !msg) {
+                mainCanvas.innerHTML = '<div class="empty-canvas-msg">Arrastra componentes aquí para comenzar a construir tu tablero.</div>';
+            }
+        }
+
+        function serializeTree(container) {
+            const data = [];
+            const blocks = Array.from(container.children).filter(c => c.classList.contains('block'));
+            
+            blocks.forEach(b => {
+                const type = b.className.match(/block-type-(\w+)/)[1];
+                const title = b.querySelector('.name-input').value || `Nuevo ${type}`;
+                const instInput = b.querySelector('.inst-input');
+                const instruction = instInput ? instInput.value : '';
+                const childDz = b.querySelector('.child-dropzone');
+                
+                const node = { type, title, instruction };
+                if (childDz) {
+                    node.children = serializeTree(childDz);
+                }
+                data.push(node);
+            });
+            
+            return data;
+        }
+
+        function renderTree(data, container) {
+            data.forEach(node => {
+                const block = createBlock(node.type, { title: node.title, instruction: node.instruction });
+                container.appendChild(block);
+                
+                if (node.children && node.children.length > 0) {
+                    const childDz = block.querySelector('.child-dropzone');
+                    if (childDz) renderTree(node.children, childDz);
+                }
+            });
+        }
+
+        document.getElementById('btnSave').addEventListener('click', async () => {
+            const btn = document.getElementById('btnSave');
+            btn.innerHTML = '<span class="material-icons-round">hourglass_empty</span> Guardando...';
+            btn.disabled = true;
+
+            const newData = serializeTree(mainCanvas);
+            
+            try {
+                const res = await fetch('/api/control/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ data: newData })
+                });
+                if (res.ok) {
+                    btn.innerHTML = '<span class="material-icons-round">check</span> Guardado';
+                    setTimeout(() => {
+                        btn.innerHTML = '<span class="material-icons-round">save</span> Guardar Tablero';
+                        btn.disabled = false;
+                    }, 2000);
+                } else {
+                    throw new Error('Server error');
+                }
+            } catch (e) {
+                alert("Error al guardar el entorno de control.");
+                btn.innerHTML = '<span class="material-icons-round">save</span> Guardar Tablero';
+                btn.disabled = false;
+            }
+        });
+
+        // Init
+        initDragAndDrop();
+        if (controlData && controlData.length > 0) {
+            const msg = mainCanvas.querySelector('.empty-canvas-msg');
+            if (msg) msg.style.display = 'none';
+            renderTree(controlData, mainCanvas);
+        }
+
+    </script>
+</body>
+</html>
