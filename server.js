@@ -633,13 +633,13 @@ app.get('/api/select-folder', (req, res) => {
     const psScript = `
         Add-Type -AssemblyName System.windows.forms
         $f = New-Object System.Windows.Forms.FolderBrowserDialog
-        $f.Description = "Selecciona la carpeta con tus imágenes"
+        $f.Description = 'Selecciona la carpeta con tus imágenes'
         $f.ShowNewFolderButton = $true
         if ($f.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
             Write-Output $f.SelectedPath
         }
     `;
-    exec(`powershell.exe -NoProfile -Command "${psScript.replace(/\n/g, ';')}"`, (err, stdout) => {
+    exec(`powershell.exe -STA -NoProfile -Command "${psScript.replace(/\n/g, ';')}"`, (err, stdout) => {
         const p = stdout.trim();
         if (p) {
             res.json({ path: p });
