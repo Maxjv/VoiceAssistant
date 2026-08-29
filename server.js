@@ -635,7 +635,9 @@ app.get('/api/select-folder', (req, res) => {
         $f = New-Object System.Windows.Forms.FolderBrowserDialog
         $f.Description = 'Selecciona la carpeta con tus imágenes'
         $f.ShowNewFolderButton = $true
-        if ($f.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
+        $form = New-Object System.Windows.Forms.Form
+        $form.TopMost = $true
+        if ($f.ShowDialog($form) -eq [System.Windows.Forms.DialogResult]::OK) {
             Write-Output $f.SelectedPath
         }
     `;
@@ -669,7 +671,7 @@ app.post('/api/init-react', (req, res) => {
 
     const args = `-NoProfile -NoExit -Command "${psCmd}"`;
     
-    exec(`powershell.exe -NoProfile -Command "Start-Process powershell -ArgumentList '${args}'"`, (err) => {
+    exec(`powershell.exe -NoProfile -Command "Start-Process powershell -WindowStyle Normal -ArgumentList '${args}'"`, (err) => {
         if (err) return res.status(500).json({error: err.message});
         res.json({success: true});
     });
