@@ -2523,3 +2523,15 @@ if (confirmInitReactBtn) {
             });
     });
 }
+
+function showActionStatus(text, icon) {
+    const el = document.getElementById('actionStatusLabel');
+    if (el) {
+        el.innerHTML = '<span class="material-icons-round" style="font-size:1rem;">' + icon + '</span> ' + text;
+        el.style.display = 'flex';
+    }
+}
+function hideActionStatus() {
+    const el = document.getElementById('actionStatusLabel');
+    if (el) el.style.display = 'none';
+}
