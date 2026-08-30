@@ -650,7 +650,7 @@ if ($f.ShowDialog($form) -eq [System.Windows.Forms.DialogResult]::OK) {
         const fs = require('fs');
         fs.writeFileSync(tempPs1, psCode);
         const { exec } = require('child_process');
-        exec('powershell.exe -WindowStyle Hidden -ExecutionPolicy Bypass -File "' + tempPs1 + '"', { timeout: 60000 }, (err) => {
+        exec('powershell.exe -STA -WindowStyle Hidden -ExecutionPolicy Bypass -File "' + tempPs1 + '"', { timeout: 60000 }, (err) => {
             try { fs.unlinkSync(tempPs1); } catch (e) { }
             try {
                 if (fs.existsSync(tempOut)) {
