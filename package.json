@@ -9,7 +9,7 @@
     "dev": "start npm start && npm run tunnel",
     "start": "node server.js",
     "tunnel": "node start_tunnel.js",
-    "build": "xcopy public dist_production\\public /E /I /Y && xcopy watcher dist_production\\watcher /E /I /Y && pkg . --targets node18-win-x64 --output dist_production/VoiceAssistant_TFTE.exe"
+    "build": "xcopy public dist_production\\public /E /I /Y && xcopy watcher dist_production\\watcher /E /I /Y && del /F /Q dist_production\\VoiceAssistant_TFTE.exe 2>nul & pkg . --targets node18-win-x64 --output dist_production/VoiceAssistant_TFTE.exe"
   },
   "pkg": {
     "assets": [
