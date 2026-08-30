@@ -631,35 +631,37 @@ app.get('/api/browse', (req, res) => {
 
 app.get('/api/select-folder', (req, res) => {
     const os = require('os');
-    const tempVbs = path.join(os.tmpdir(), 'folder_picker_' + Date.now() + '.vbs');
+    const path = require('path');
+    const tempPs1 = path.join(os.tmpdir(), 'folder_picker_' + Date.now() + '.ps1');
     const tempOut = path.join(os.tmpdir(), 'folder_out_' + Date.now() + '.txt');
-    
-    const vbsCode = [
-        'Set objShell = CreateObject("Shell.Application")',
-        'Set objFolder = objShell.BrowseForFolder(0, "Selecciona la carpeta", &H0051, "")',
-        'If Not objFolder Is Nothing Then',
-        '    Set fso = CreateObject("Scripting.FileSystemObject")',
-        '    Set f = fso.CreateTextFile("' + tempOut.replace(/\\/g, '\\\\') + '", True)',
-        '    f.WriteLine objFolder.Self.Path',
-        '    f.Close',
-        'End If',
-    ].join('\r\n');
-    
+    const psCode = `
+Add-Type -AssemblyName System.windows.forms
+$f = New-Object System.Windows.Forms.FolderBrowserDialog
+$f.Description = 'Selecciona la carpeta'
+$f.ShowNewFolderButton = $true
+$form = New-Object System.Windows.Forms.Form
+$form.TopMost = $true
+if ($f.ShowDialog($form) -eq [System.Windows.Forms.DialogResult]::OK) {
+    Set-Content -Path '${tempOut}' -Value $f.SelectedPath
+}
+    `.trim();
+
     try {
-        fs.writeFileSync(tempVbs, vbsCode);
+        const fs = require('fs');
+        fs.writeFileSync(tempPs1, psCode);
         const { exec } = require('child_process');
-        exec('wscript //nologo "' + tempVbs + '"', { timeout: 60000 }, (err) => {
-            try { fs.unlinkSync(tempVbs); } catch(e) {}
+        exec('powershell.exe -WindowStyle Hidden -ExecutionPolicy Bypass -File "' + tempPs1 + '"', { timeout: 60000 }, (err) => {
+            try { fs.unlinkSync(tempPs1); } catch (e) { }
             try {
                 if (fs.existsSync(tempOut)) {
                     const p = fs.readFileSync(tempOut, 'utf8').trim();
                     fs.unlinkSync(tempOut);
                     if (p) return res.json({ path: p });
                 }
-            } catch(e) {}
-            res.json({ error: 'Cancelado' });
+            } catch (e) { }
+            res.json({ error: 'Cancelado o no se selecciono nada' });
         });
-    } catch(e) {
+    } catch (e) {
         res.status(500).json({ error: 'Error interno: ' + e.message });
     }
 });

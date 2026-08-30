@@ -1560,10 +1560,10 @@ if (!deletePopup) {
     `;
     document.body.appendChild(deletePopup);
 
-    document.getElementById('deletePopupBackdrop').addEventListener('click', () => {
+    var _dpb = document.getElementById('deletePopupBackdrop'); if (_dpb) _dpb.addEventListener('click', () => {
         deletePopup.style.display = 'none';
     });
-    document.getElementById('cancelDeleteBtn').addEventListener('click', () => {
+    var _cdb = document.getElementById('cancelDeleteBtn'); if (_cdb) _cdb.addEventListener('click', () => {
         deletePopup.style.display = 'none';
     });
 }
@@ -1576,7 +1576,7 @@ window.openDeletePopup = function (event, cardId) {
     document.getElementById('deleteTaskPopup').style.display = 'flex';
 };
 
-document.getElementById('confirmDeleteBtn').addEventListener('click', () => {
+var _cfdb = document.getElementById('confirmDeleteBtn'); if (_cfdb) _cfdb.addEventListener('click', () => {
     if (taskToDeleteId) {
         const card = document.getElementById(taskToDeleteId);
         if (card) {
