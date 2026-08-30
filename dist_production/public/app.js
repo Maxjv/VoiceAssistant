@@ -2483,3 +2483,43 @@ try {
     console.error("No se pudo conectar al Live Reload:", e);
 }
 
+// ==========================================
+// LÓGICA DE INICIALIZAR PROYECTO REACT
+// ==========================================
+const btnInitReact = document.getElementById('btnInitReact');
+const initReactModal = document.getElementById('initReactModal');
+const cancelInitReactBtn = document.getElementById('cancelInitReactBtn');
+const confirmInitReactBtn = document.getElementById('confirmInitReactBtn');
+
+if (btnInitReact) {
+    btnInitReact.addEventListener('click', () => {
+        initReactModal.classList.remove('hidden');
+    });
+}
+if (cancelInitReactBtn) {
+    cancelInitReactBtn.addEventListener('click', () => {
+        initReactModal.classList.add('hidden');
+    });
+}
+if (confirmInitReactBtn) {
+    confirmInitReactBtn.addEventListener('click', () => {
+        initReactModal.classList.add('hidden');
+        showActionStatus('Inicializando...', 'bolt');
+        
+        fetch('/api/init-react', { method: 'POST' })
+            .then(res => res.json())
+            .then(data => {
+                if(data.success) {
+                    addTranscriptText('Se abrió una ventana para instalar React. El panel lo detectará cuando finalice.', 'ai');
+                    setTimeout(() => hideActionStatus(), 3000);
+                } else {
+                    alert('Error: ' + data.error);
+                    hideActionStatus();
+                }
+            })
+            .catch(err => {
+                alert('Error de conexión');
+                hideActionStatus();
+            });
+    });
+}
