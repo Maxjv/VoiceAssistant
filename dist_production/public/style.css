@@ -713,3 +713,5 @@ textarea#textInput::-webkit-scrollbar {
 .task-card.collapsed .chevron-icon {
     transform: rotate(-90deg);
 }
+
+.hidden { display: none !important; }
