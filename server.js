@@ -630,51 +630,72 @@ app.get('/api/browse', (req, res) => {
 });
 
 app.get('/api/select-folder', (req, res) => {
-    const psScript = `
-        Add-Type -AssemblyName System.windows.forms
-        $f = New-Object System.Windows.Forms.FolderBrowserDialog
-        $f.Description = 'Selecciona la carpeta con tus imágenes'
-        $f.ShowNewFolderButton = $true
-        $form = New-Object System.Windows.Forms.Form
-        $form.TopMost = $true
-        if ($f.ShowDialog($form) -eq [System.Windows.Forms.DialogResult]::OK) {
-            Write-Output $f.SelectedPath
-        }
-    `;
-    exec(`powershell.exe -STA -NoProfile -Command "${psScript.replace(/\n/g, ';')}"`, (err, stdout) => {
-        const p = stdout.trim();
-        if (p) {
-            res.json({ path: p });
-        } else {
-            res.json({ error: 'Cancelado' });
-        }
-    });
+    const tempPs1 = path.join(require('os').tmpdir(), `folder_picker_${Date.now()}.ps1`);
+    const psCode = `
+Add-Type -AssemblyName System.windows.forms
+$f = New-Object System.Windows.Forms.FolderBrowserDialog
+$f.Description = 'Selecciona la carpeta con tus imágenes'
+$f.ShowNewFolderButton = $true
+$form = New-Object System.Windows.Forms.Form
+$form.TopMost = $true
+if ($f.ShowDialog($form) -eq [System.Windows.Forms.DialogResult]::OK) {
+    Write-Output $f.SelectedPath
+}
+    `.trim();
+
+    try {
+        fs.writeFileSync(tempPs1, psCode);
+        exec(`powershell.exe -STA -ExecutionPolicy Bypass -WindowStyle Hidden -File "${tempPs1}"`, (err, stdout) => {
+            try { fs.unlinkSync(tempPs1); } catch (e) {} // Cleanup
+            const p = stdout.trim();
+            if (p) {
+                res.json({ path: p });
+            } else {
+                res.json({ error: 'Cancelado' });
+            }
+        });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
 });
 
 app.post('/api/init-react', (req, res) => {
     const root = (process.env.CONTEXT_PATH || '').replace(/'/g, "''");
     if (!root || !fs.existsSync(root)) return res.status(400).json({error: "CONTEXT_PATH inválido"});
     
-    const psCmd = `
-        cd '${root}'
-        Write-Host 'Iniciando creacion de Proyecto React (Vite)...' -ForegroundColor Cyan
-        npm create vite@latest webapp -- --template react
-        if (Test-Path 'webapp') {
-            cd webapp
-            Write-Host 'Instalando dependencias (esto tomara un minuto)...' -ForegroundColor Yellow
-            npm install
-            Write-Host 'Finalizado exitosamente! Tu asistente lo detectara en breve. Puedes cerrar esta ventana.' -ForegroundColor Green
-        } else {
-            Write-Host 'Error al crear la carpeta webapp.' -ForegroundColor Red
-        }
-    `.replace(/\n/g, ';').replace(/"/g, '`"');
+    const batPath = path.join(root, 'init-react.bat');
+    const batContent = `
+@echo off
+color 0B
+echo Iniciando creacion de Proyecto React (Vite)...
+call npm create vite@latest webapp -- --template react
+if exist "webapp" (
+    cd webapp
+    color 0E
+    echo.
+    echo Instalando dependencias (esto tomara unos minutos)...
+    call npm install
+    color 0A
+    echo.
+    echo Finalizado exitosamente! Tu asistente lo detectara en breve.
+) else (
+    color 0C
+    echo Error al crear la carpeta webapp.
+)
+echo.
+pause
+del "%~f0"
+    `.trim();
 
-    const args = `-NoProfile -NoExit -Command "${psCmd}"`;
-    
-    exec(`powershell.exe -NoProfile -Command "Start-Process powershell -WindowStyle Normal -ArgumentList '${args}'"`, (err) => {
-        if (err) return res.status(500).json({error: err.message});
-        res.json({success: true});
-    });
+    try {
+        fs.writeFileSync(batPath, batContent);
+        exec(`start "Creando React" cmd.exe /c "${batPath}"`, { cwd: root }, (err) => {
+            if (err) return res.status(500).json({error: err.message});
+            res.json({success: true});
+        });
+    } catch(e) {
+        res.status(500).json({error: e.message});
+    }
 });
 
 app.get('/api/serve-img', (req, res) => {
