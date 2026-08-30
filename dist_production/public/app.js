@@ -2486,44 +2486,6 @@ try {
 // ==========================================
 // LÓGICA DE INICIALIZAR PROYECTO REACT
 // ==========================================
-const btnInitReact = document.getElementById('btnInitReact');
-const initReactModal = document.getElementById('initReactModal');
-const cancelInitReactBtn = document.getElementById('cancelInitReactBtn');
-const confirmInitReactBtn = document.getElementById('confirmInitReactBtn');
-
-if (btnInitReact) {
-    btnInitReact.addEventListener('click', () => {
-        initReactModal.classList.remove('hidden');
-    });
-}
-if (cancelInitReactBtn) {
-    cancelInitReactBtn.addEventListener('click', () => {
-        initReactModal.classList.add('hidden');
-    });
-}
-if (confirmInitReactBtn) {
-    confirmInitReactBtn.addEventListener('click', () => {
-        initReactModal.classList.add('hidden');
-        showActionStatus('Inicializando...', 'bolt');
-
-        fetch('/api/init-react', { method: 'POST' })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    addTranscriptText('Se abrió una ventana para instalar React. El panel lo detectará cuando finalice.', 'ai');
-                    setTimeout(() => hideActionStatus(), 3000);
-                } else {
-                    alert('Error: ' + data.error);
-                    hideActionStatus();
-                }
-            })
-            .catch(err => {
-                alert('Error de conexión');
-                hideActionStatus();
-            });
-    });
-}
-
 function showActionStatus(text, icon) {
     const el = document.getElementById('actionStatusLabel');
     if (el) {
@@ -2535,3 +2497,46 @@ function hideActionStatus() {
     const el = document.getElementById('actionStatusLabel');
     if (el) el.style.display = 'none';
 }
+
+const btnInitReact = document.getElementById('btnInitReact');
+const initReactModal = document.getElementById('initReactModal');
+const cancelInitReactBtn = document.getElementById('cancelInitReactBtn');
+const confirmInitReactBtn = document.getElementById('confirmInitReactBtn');
+
+if (btnInitReact && initReactModal) {
+    btnInitReact.addEventListener('click', () => {
+        initReactModal.classList.remove('hidden');
+        initReactModal.style.display = 'flex';
+    });
+}
+if (cancelInitReactBtn && initReactModal) {
+    cancelInitReactBtn.addEventListener('click', () => {
+        initReactModal.classList.add('hidden');
+        initReactModal.style.display = 'none';
+    });
+}
+if (confirmInitReactBtn && initReactModal) {
+    confirmInitReactBtn.addEventListener('click', () => {
+        initReactModal.classList.add('hidden');
+        initReactModal.style.display = 'none';
+        
+        if (typeof showActionStatus === 'function') showActionStatus('Inicializando...', 'bolt');
+        
+        fetch('/api/init-react', { method: 'POST' })
+            .then(res => res.json())
+            .then(data => {
+                if(data.success) {
+                    if (typeof addTranscriptText === 'function') addTranscriptText('Se abrió una ventana para instalar React. El panel lo detectará cuando finalice.', 'ai');
+                    setTimeout(() => { if (typeof hideActionStatus === 'function') hideActionStatus(); }, 3000);
+                } else {
+                    alert('Error: ' + data.error);
+                    if (typeof hideActionStatus === 'function') hideActionStatus();
+                }
+            })
+            .catch(err => {
+                alert('Error de conexión');
+                if (typeof hideActionStatus === 'function') hideActionStatus();
+            });
+    });
+}
+
