@@ -1,0 +1,4 @@
+const fs = require('fs');
+let c = fs.readFileSync('server.js', 'utf8');
+c = c.replace(/app\.get\('\/api\/select-folder'[\s\S]*?\n\}\);\r?\n\}\);/m, `app.get('/api/select-folder', (req, res) => {\n    const tempVbs = require('path').join(require('os').tmpdir(), 'folder_picker_' + Date.now() + '.vbs');\n    const vbsCode = 'Set s=CreateObject("Shell.Application")\\nSet f=s.BrowseForFolder(0,"Selecciona la carpeta",0,0)\\nIf Not f Is Nothing Then\\nWscript.Echo f.Self.Path\\nEnd If';\n    try {\n        require('fs').writeFileSync(tempVbs, vbsCode);\n        require('child_process').exec('cscript //nologo "' + tempVbs + '"', (err, stdout) => {\n            try { require('fs').unlinkSync(tempVbs); } catch (e) {}\n            const p = stdout.trim();\n            if (p) res.json({ path: p }); else res.json({ error: 'Cancelado' });\n        });\n    } catch (e) {\n        res.status(500).json({ error: e.message });\n    }\n});`);
+fs.writeFileSync('server.js', c);
