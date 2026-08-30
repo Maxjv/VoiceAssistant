@@ -2472,9 +2472,6 @@ try {
                         const syncBtn = document.getElementById('gitSyncBtn');
                         if (syncBtn && !syncBtn.disabled) {
                             console.log('☁️ Ejecutando Auto-Sync a GitHub...');
-                            syncBtn.click();
-                        }
-                    }, 10000);
                 }
             }
         }
@@ -2491,19 +2488,22 @@ const initReactModal = document.getElementById('initReactModal');
 const cancelInitReactBtn = document.getElementById('cancelInitReactBtn');
 const confirmInitReactBtn = document.getElementById('confirmInitReactBtn');
 
-if (btnInitReact) {
+if (btnInitReact && initReactModal) {
     btnInitReact.addEventListener('click', () => {
         initReactModal.classList.remove('hidden');
+        initReactModal.style.display = 'flex';
     });
 }
-if (cancelInitReactBtn) {
+if (cancelInitReactBtn && initReactModal) {
     cancelInitReactBtn.addEventListener('click', () => {
         initReactModal.classList.add('hidden');
+        initReactModal.style.display = 'none';
     });
 }
-if (confirmInitReactBtn) {
+if (confirmInitReactBtn && initReactModal) {
     confirmInitReactBtn.addEventListener('click', () => {
         initReactModal.classList.add('hidden');
+        initReactModal.style.display = 'none';
         showActionStatus('Inicializando...', 'bolt');
         
         fetch('/api/init-react', { method: 'POST' })

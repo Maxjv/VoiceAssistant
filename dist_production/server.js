@@ -636,7 +636,7 @@ app.get('/api/select-folder', (req, res) => {
     
     const vbsCode = [
         'Set objShell = CreateObject("Shell.Application")',
-        'Set objFolder = objShell.BrowseForFolder(0, "Selecciona la carpeta con tus imágenes", &H0051, "")',
+        'Set objFolder = objShell.BrowseForFolder(0, "Selecciona la carpeta con tus imagenes", &H0051, "")',
         'If Not objFolder Is Nothing Then',
         '    Set fso = CreateObject("Scripting.FileSystemObject")',
         '    Set f = fso.CreateTextFile("' + tempOut.replace(/\\/g, '\\\\') + '", True)',
@@ -648,7 +648,7 @@ app.get('/api/select-folder', (req, res) => {
     try {
         fs.writeFileSync(tempVbs, vbsCode);
         const { exec } = require('child_process');
-        exec('cscript //nologo "' + tempVbs + '"', { timeout: 60000 }, (err) => {
+        exec('wscript //nologo "' + tempVbs + '"', { timeout: 60000 }, (err) => {
             try { fs.unlinkSync(tempVbs); } catch(e) {}
             try {
                 if (fs.existsSync(tempOut)) {
