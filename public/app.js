@@ -457,7 +457,7 @@ if (previewIframe) {
             try {
                 const res = await fetch('/api/check-control');
                 const data = await res.json();
-                
+
                 if (data.exists) {
                     if (!iframeHtml.src.endsWith('/control-board')) {
                         iframeHtml.src = '/control-board';
@@ -470,7 +470,7 @@ if (previewIframe) {
                     if (ctrlModal) {
                         ctrlModal.classList.remove('hidden');
                         ctrlModal.style.display = 'flex';
-                        
+
                         const closeModal = () => {
                             ctrlModal.classList.add('hidden');
                             setTimeout(() => ctrlModal.style.display = 'none', 300);
@@ -478,11 +478,11 @@ if (previewIframe) {
 
                         document.getElementById('closeCreateControlModal').onclick = closeModal;
                         document.getElementById('btnCancelCreateControl').onclick = closeModal;
-                        
+
                         document.getElementById('btnConfirmCreateControl').onclick = async () => {
                             document.getElementById('btnConfirmCreateControl').disabled = true;
                             document.getElementById('btnConfirmCreateControl').innerHTML = '<span class="material-icons-round" style="font-size: 1.1rem; margin-right: 5px;">hourglass_empty</span> Creando...';
-                            
+
                             try {
                                 const createRes = await fetch('/api/control/create', { method: 'POST' });
                                 const createData = await createRes.json();
@@ -711,7 +711,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const setRes = await fetch('/api/set-context', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ 
+                        body: JSON.stringify({
                             contextPath: data.contextPath,
                             projectName: data.projectName
                         })
@@ -760,7 +760,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const activeCtxObjStr = localStorage.getItem('tfte_active_context_obj');
                 let activeCtx = 'C:\\TFTE';
                 let activeProj = 'React App';
-                
+
                 if (activeCtxObjStr) {
                     try {
                         const parsed = JSON.parse(activeCtxObjStr);
@@ -768,7 +768,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             activeCtx = parsed.path;
                             activeProj = parsed.name || 'React App';
                         }
-                    } catch(e) {}
+                    } catch (e) { }
                 }
 
                 const lbl1 = document.getElementById('projectNameLabel1');
@@ -780,7 +780,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     await fetch('/api/set-context', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ 
+                        body: JSON.stringify({
                             contextPath: activeCtx,
                             projectName: activeProj
                         })
@@ -1318,7 +1318,7 @@ function pollAgente() {
                                 url.searchParams.set('t', Date.now()); // Forzar cache bust
                                 ifr.src = url.toString();
                             }
-                        } catch(e) {}
+                        } catch (e) { }
                     });
 
                     if (typeof updateTaskRepoResponse === 'function' && currentTaskObj) {
@@ -1898,13 +1898,13 @@ document.addEventListener('DOMContentLoaded', () => {
 // --- LOGICA DE COMPLETAR TAREAS ---
 // --- LOGICA DE COMPLETAR TAREAS (BOTÓN HECHO) ---
 // --- LOGICA DE COMPLETAR TAREAS DESDE EL HISTORIAL ---
-window.confirmarDesdeHistorial = async function(btn, taskText, id, event) {
+window.confirmarDesdeHistorial = async function (btn, taskText, id, event) {
     if (event) {
         event.preventDefault();
         event.stopPropagation();
     }
     if (btn.textContent === 'COMPLETADO' || btn.textContent === 'ERROR') return;
-    
+
     btn.innerHTML = 'Guardando...';
     btn.style.pointerEvents = 'none';
 
@@ -1915,7 +1915,7 @@ window.confirmarDesdeHistorial = async function(btn, taskText, id, event) {
             body: JSON.stringify({ text: taskText, subApp: '' })
         });
         const data = await res.json();
-        
+
         if (data.ok) {
             btn.textContent = 'COMPLETADO';
             btn.className = 'task-badge badge-completed';
@@ -1928,7 +1928,7 @@ window.confirmarDesdeHistorial = async function(btn, taskText, id, event) {
                 btn.style.pointerEvents = 'auto';
             }, 2000);
         }
-    } catch(err) {
+    } catch (err) {
         console.error('Error:', err);
         btn.textContent = 'ERROR';
         btn.className = 'task-badge badge-error';
@@ -2456,7 +2456,7 @@ try {
                         url.searchParams.set('t', Date.now());
                         ifr.src = url.toString();
                     }
-                } catch(e) {}
+                } catch (e) { }
             });
 
             if (isAutoSyncEnabled) {
@@ -2472,6 +2472,9 @@ try {
                         const syncBtn = document.getElementById('gitSyncBtn');
                         if (syncBtn && !syncBtn.disabled) {
                             console.log('☁️ Ejecutando Auto-Sync a GitHub...');
+                            syncBtn.click();
+                        }
+                    }, 10000);
                 }
             }
         }
@@ -2488,28 +2491,25 @@ const initReactModal = document.getElementById('initReactModal');
 const cancelInitReactBtn = document.getElementById('cancelInitReactBtn');
 const confirmInitReactBtn = document.getElementById('confirmInitReactBtn');
 
-if (btnInitReact && initReactModal) {
+if (btnInitReact) {
     btnInitReact.addEventListener('click', () => {
         initReactModal.classList.remove('hidden');
-        initReactModal.style.display = 'flex';
     });
 }
-if (cancelInitReactBtn && initReactModal) {
+if (cancelInitReactBtn) {
     cancelInitReactBtn.addEventListener('click', () => {
         initReactModal.classList.add('hidden');
-        initReactModal.style.display = 'none';
     });
 }
-if (confirmInitReactBtn && initReactModal) {
+if (confirmInitReactBtn) {
     confirmInitReactBtn.addEventListener('click', () => {
         initReactModal.classList.add('hidden');
-        initReactModal.style.display = 'none';
         showActionStatus('Inicializando...', 'bolt');
-        
+
         fetch('/api/init-react', { method: 'POST' })
             .then(res => res.json())
             .then(data => {
-                if(data.success) {
+                if (data.success) {
                     addTranscriptText('Se abrió una ventana para instalar React. El panel lo detectará cuando finalice.', 'ai');
                     setTimeout(() => hideActionStatus(), 3000);
                 } else {

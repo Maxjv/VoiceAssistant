@@ -630,44 +630,42 @@ app.get('/api/browse', (req, res) => {
 });
 
 app.get('/api/select-folder', (req, res) => {
-    const os = require('os');
-    const tempVbs = path.join(os.tmpdir(), 'folder_picker_' + Date.now() + '.vbs');
-    const tempOut = path.join(os.tmpdir(), 'folder_out_' + Date.now() + '.txt');
-    
-    const vbsCode = [
-        'Set objShell = CreateObject("Shell.Application")',
-        'Set objFolder = objShell.BrowseForFolder(0, "Selecciona la carpeta con tus imagenes", &H0051, "")',
-        'If Not objFolder Is Nothing Then',
-        '    Set fso = CreateObject("Scripting.FileSystemObject")',
-        '    Set f = fso.CreateTextFile("' + tempOut.replace(/\\/g, '\\\\') + '", True)',
-        '    f.WriteLine objFolder.Self.Path',
-        '    f.Close',
-        'End If',
-    ].join('\r\n');
-    
+    const tempPs1 = path.join(require('os').tmpdir(), `folder_picker_${Date.now()}.ps1`);
+    const tempOut = path.join(require('os').tmpdir(), `folder_out_${Date.now()}.txt`);
+    const psCode = `
+Add-Type -AssemblyName System.windows.forms
+$f = New-Object System.Windows.Forms.FolderBrowserDialog
+$f.Description = 'Selecciona la carpeta con tus imágenes'
+$f.ShowNewFolderButton = $true
+$form = New-Object System.Windows.Forms.Form
+$form.TopMost = $true
+if ($f.ShowDialog($form) -eq [System.Windows.Forms.DialogResult]::OK) {
+    Set-Content -Path '${tempOut}' -Value $f.SelectedPath
+}
+    `.trim();
+
     try {
-        fs.writeFileSync(tempVbs, vbsCode);
-        const { exec } = require('child_process');
-        exec('wscript //nologo "' + tempVbs + '"', { timeout: 60000 }, (err) => {
-            try { fs.unlinkSync(tempVbs); } catch(e) {}
+        fs.writeFileSync(tempPs1, psCode);
+        exec(`start /wait powershell.exe -STA -ExecutionPolicy Bypass -WindowStyle Normal -File "${tempPs1}"`, (err) => {
+            try { fs.unlinkSync(tempPs1); } catch (e) { } // Cleanup
             try {
                 if (fs.existsSync(tempOut)) {
                     const p = fs.readFileSync(tempOut, 'utf8').trim();
                     fs.unlinkSync(tempOut);
                     if (p) return res.json({ path: p });
                 }
-            } catch(e) {}
+            } catch (e) { }
             res.json({ error: 'Cancelado' });
         });
-    } catch(e) {
+    } catch (e) {
         res.status(500).json({ error: 'Error interno: ' + e.message });
     }
 });
 
 app.post('/api/init-react', (req, res) => {
     const root = (process.env.CONTEXT_PATH || '').replace(/'/g, "''");
-    if (!root || !fs.existsSync(root)) return res.status(400).json({error: "CONTEXT_PATH inválido"});
-    
+    if (!root || !fs.existsSync(root)) return res.status(400).json({ error: "CONTEXT_PATH inválido" });
+
     const batPath = path.join(root, 'init-react.bat');
     const batContent = `
 @echo off
@@ -695,11 +693,11 @@ del "%~f0"
     try {
         fs.writeFileSync(batPath, batContent);
         exec(`start "Creando React" "${batPath}"`, { cwd: root }, (err) => {
-            if (err) return res.status(500).json({error: err.message});
-            res.json({success: true});
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ success: true });
         });
-    } catch(e) {
-        res.status(500).json({error: e.message});
+    } catch (e) {
+        res.status(500).json({ error: e.message });
     }
 });
 
@@ -710,7 +708,7 @@ app.get('/api/serve-img', (req, res) => {
         if (!fs.existsSync(p)) return res.status(404).send('Not found');
         if (!IMG_EXT.has(path.extname(p).toLowerCase())) return res.status(400).send('Not image');
         res.sendFile(p);
-    } catch(e) {
+    } catch (e) {
         res.status(500).send(e.message);
     }
 });
