@@ -645,7 +645,7 @@ if ($f.ShowDialog($form) -eq [System.Windows.Forms.DialogResult]::OK) {
 
     try {
         fs.writeFileSync(tempPs1, psCode);
-        exec(`powershell.exe -STA -ExecutionPolicy Bypass -WindowStyle Hidden -File "${tempPs1}"`, (err, stdout) => {
+        exec(`powershell.exe -STA -ExecutionPolicy Bypass -File "${tempPs1}"`, (err, stdout) => {
             try { fs.unlinkSync(tempPs1); } catch (e) {} // Cleanup
             const p = stdout.trim();
             if (p) {
@@ -689,7 +689,7 @@ del "%~f0"
 
     try {
         fs.writeFileSync(batPath, batContent);
-        exec(`start "Creando React" cmd.exe /c "${batPath}"`, { cwd: root }, (err) => {
+        exec(`start "Creando React" cmd.exe /c ""${batPath}""`, { cwd: root }, (err) => {
             if (err) return res.status(500).json({error: err.message});
             res.json({success: true});
         });
