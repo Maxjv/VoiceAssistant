@@ -631,6 +631,7 @@ app.get('/api/browse', (req, res) => {
 
 app.get('/api/select-folder', (req, res) => {
     const tempPs1 = path.join(require('os').tmpdir(), `folder_picker_${Date.now()}.ps1`);
+    const tempOut = path.join(require('os').tmpdir(), `folder_out_${Date.now()}.txt`);
     const psCode = `
 Add-Type -AssemblyName System.windows.forms
 $f = New-Object System.Windows.Forms.FolderBrowserDialog
@@ -639,23 +640,25 @@ $f.ShowNewFolderButton = $true
 $form = New-Object System.Windows.Forms.Form
 $form.TopMost = $true
 if ($f.ShowDialog($form) -eq [System.Windows.Forms.DialogResult]::OK) {
-    Write-Output $f.SelectedPath
+    Set-Content -Path '${tempOut}' -Value $f.SelectedPath
 }
     `.trim();
 
     try {
         fs.writeFileSync(tempPs1, psCode);
-        exec(`powershell.exe -STA -ExecutionPolicy Bypass -File "${tempPs1}"`, (err, stdout) => {
+        exec(`start /wait powershell.exe -STA -ExecutionPolicy Bypass -WindowStyle Normal -File "${tempPs1}"`, (err) => {
             try { fs.unlinkSync(tempPs1); } catch (e) {} // Cleanup
-            const p = stdout.trim();
-            if (p) {
-                res.json({ path: p });
-            } else {
-                res.json({ error: 'Cancelado' });
-            }
+            try {
+                if (fs.existsSync(tempOut)) {
+                    const p = fs.readFileSync(tempOut, 'utf8').trim();
+                    fs.unlinkSync(tempOut);
+                    if (p) return res.json({ path: p });
+                }
+            } catch(e) {}
+            res.json({ error: 'Cancelado' });
         });
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ error: 'Error interno: ' + e.message });
     }
 });
 
@@ -689,7 +692,7 @@ del "%~f0"
 
     try {
         fs.writeFileSync(batPath, batContent);
-        exec(`start "Creando React" cmd.exe /c ""${batPath}""`, { cwd: root }, (err) => {
+        exec(`start "Creando React" "${batPath}"`, { cwd: root }, (err) => {
             if (err) return res.status(500).json({error: err.message});
             res.json({success: true});
         });
