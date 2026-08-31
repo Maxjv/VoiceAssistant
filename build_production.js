@@ -87,7 +87,7 @@ dirsToCopy.forEach(dir => {
     if (fs.existsSync(srcPath)) {
         copyRecursiveSync(srcPath, destPath);
         console.log(`  - Directorio /${dir} copiado.`);
-        
+
         // Purgar basura si es la carpeta watcher
         if (dir === 'watcher') {
             const watcherDirs = ['claude', 'gemini'];
@@ -112,10 +112,10 @@ const distEnvPath = path.join(DIST_DIR, '.env');
 
 if (fs.existsSync(envPath)) {
     let envContent = fs.readFileSync(envPath, 'utf8');
-    
+
     // Lista de variables a limpiar (vaciar su valor)
-    const varsToPurge = ['GROQ_API_KEY', 'GEMINI_API_KEY', 'USER_EMAIL', 'CONTEXT_PATH'];
-    
+    const varsToPurge = ['GROQ_API_KEY', 'GEMINI_API_KEY', 'USER_EMAIL', 'CONTEXT_PATH', 'ANTHROPIC_API_KEY'];
+
     let lines = envContent.split(/\r?\n/);
     let purgedLines = lines.map(line => {
         let [key, ...rest] = line.split('=');

@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 
 <head>
@@ -34,7 +34,7 @@
                 <div
                     style="display: flex; align-items: center; gap: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                     <span class="material-icons-round" style="font-size: 0.95rem; color: #38bdf8;">playlist_play</span>
-                    <span id="queueStatusText">Cola de ejecuci├â┬│n activa</span>
+                    <span id="queueStatusText">Cola de ejecución activa</span>
                 </div>
                 <button onclick="window.clearExecutionQueue(event)"
                     style="background: none; border: none; color: #f87171; font-size: 0.7rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 2px;">
@@ -46,7 +46,7 @@
             </div>
         </div>
         <aside class="side-rail">
-            <div class="rail-brand" title="TFTE Assistant ├óÔé¼ÔÇØ Conectado a tu proyecto local">
+            <div class="rail-brand" title="TFTE Assistant — Conectado a tu proyecto local">
                 <span class="material-icons-round">graphic_eq</span>
                 <span class="rail-label">TFTE</span>
             </div>
@@ -58,11 +58,11 @@
                     <span class="material-icons-round">apps</span>
                     <span class="rail-label">TFTE</span>
                 </button>
-                <button id="btnPlan" class="rail-btn" title="Ver Plan de Implementaci├â┬│n">
+                <button id="btnPlan" class="rail-btn" title="Ver Plan de Implementación">
                     <span class="material-icons-round">description</span>
                     <span class="rail-label">Plan</span>
                 </button>
-                <button id="btnHtml" class="rail-btn" title="Control ├óÔé¼ÔÇØ TFTE Next Steps MainApp 2">
+                <button id="btnHtml" class="rail-btn" title="Control — TFTE Next Steps MainApp 2">
                     <span class="material-icons-round">build</span>
                     <span class="rail-label">Control</span>
                 </button>
@@ -86,7 +86,7 @@
             <div class="rail-spacer"></div>
 
             <div class="rail-actions">
-                <button id="zoomOutBtn" class="rail-icon-btn" title="Alejar (ver m├â┬ís achicado)">
+                <button id="zoomOutBtn" class="rail-icon-btn" title="Alejar (ver más achicado)">
                     <span class="material-icons-round">zoom_out</span>
                 </button>
                 <span id="zoomLevelLabel" class="zoom-level-label">100%</span>
@@ -96,7 +96,7 @@
 
                 <div style="width: 1px; height: 24px; background: rgba(255,255,255,0.2); margin: 0 10px;"></div>
 
-                <!-- Bot├â┬│n Git Sync Elegante (Pill Design) -->
+                <!-- Botón Git Sync Elegante (Pill Design) -->
                 <div
                     style="display: flex; align-items: center; background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 2px; margin: 0 4px; box-shadow: inset 0 1px 4px rgba(0,0,0,0.2);">
                     <button id="gitSyncBtn" title="Respaldar manual"
@@ -153,7 +153,7 @@
                 <span class="material-icons-round" id="micIcon">mic</span>
             </button>
             <button id="keyboardBtn" class="fab fab-small"
-                title="Escribir en vez de hablar (m├â┬ís preciso que el reconocimiento de voz)">
+                title="Escribir en vez de hablar (más preciso que el reconocimiento de voz)">
                 <span class="material-icons-round">keyboard</span>
             </button>
 
@@ -164,10 +164,10 @@
 
         <div id="textPanel" class="text-panel hidden">
             <input id="folderInput" type="text"
-                placeholder="Carpeta (opcional, ej: src/interface/apps/2mog) ├óÔé¼ÔÇØ solo aplica en Modo Agente"
+                placeholder="Carpeta (opcional, ej: src/interface/apps/2mog) — solo aplica en Modo Agente"
                 autocomplete="off">
             <div class="text-panel-row">
-                <textarea id="textInput" rows="1" placeholder="Escrib├â┬¡ tu mensaje..." autocomplete="off"></textarea>
+                <textarea id="textInput" rows="1" placeholder="Escrib├â¡ tu mensaje..." autocomplete="off"></textarea>
                 <button id="sendTextBtn" title="Enviar">
                     <span class="material-icons-round">send</span>
                 </button>
@@ -225,7 +225,7 @@
                     style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <span class="material-icons-round" style="color: #38bdf8; font-size: 1.3rem;">tune</span>
-                        <h2 style="font-size: 1.15rem; margin: 0; color: #f8fafc; font-weight: 700;">Gesti├│n de
+                        <h2 style="font-size: 1.15rem; margin: 0; color: #f8fafc; font-weight: 700;">Gestión de
                             Contextos</h2>
                         <div id="contextStatusLabel"
                             style="font-size: 0.68rem; color: #38bdf8; padding: 2px 8px; background: rgba(56, 189, 248, 0.12); border-radius: 999px; border: 1px solid rgba(56,189,248,0.25); font-weight: 600;">
@@ -242,7 +242,7 @@
                     style="background: rgba(56, 189, 248, 0.06); border: 1px solid rgba(56, 189, 248, 0.18); color: #bae6fd; padding: 10px 14px; margin-bottom: 16px; border-radius: 10px; font-size: 0.78rem; line-height: 1.45;">
                     <strong style="display: flex; align-items: center; gap: 5px; color: #38bdf8; margin-bottom: 3px;">
                         <span class="material-icons-round" style="font-size: 0.95rem;">lightbulb</span> Tip de
-                        Autenticaci├│n
+                        Autenticación
                     </strong>
                     Si el asistente no responde, ejecuta <code
                         style="background: rgba(0,0,0,0.3); padding: 1px 5px; border-radius: 4px; color: #38bdf8; font-family: monospace;">agy</code>
@@ -273,19 +273,19 @@
                 </div>
 
                 <div class="startup-input-group">
-                    <label>Contexto Activo (Selecci├│nalo de la lista)</label>
+                    <label>Contexto Activo (Selecciónalo de la lista)</label>
                     <select id="savedContextsSelect">
                     </select>
                 </div>
 
                 <div class="startup-input-group">
-                    <label>A├▒adir Nuevo Contexto</label>
+                    <label>Añadir Nuevo Contexto</label>
                     <div style="display: flex; gap: 8px; margin-bottom: 18px;">
                         <input type="text" id="newContextFolder" placeholder="Ej: C:\TFTE\VoiceAssistant"
                             style="flex: 1;">
                         <button id="addContextBtn"
                             style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); padding: 0 14px; border-radius: 8px; cursor: pointer; font-size: 0.8rem; font-weight: 600; white-space: nowrap; display: flex; align-items: center; gap: 4px; transition: all 0.2s;">
-                            <span class="material-icons-round" style="font-size: 0.95rem;">add</span> A├▒adir
+                            <span class="material-icons-round" style="font-size: 0.95rem;">add</span> Añadir
                         </button>
                     </div>
 
@@ -297,14 +297,14 @@
             </div>
         </div>
 
-        <!-- MODAL INTERACTIVO DE LOGIN VS CR├ëDITOS (AQU├ì EST├ü LA NUEVA UX) -->
+        <!-- MODAL INTERACTIVO DE LOGIN VS CRÉDITOS (AQUÍ ESTÁ LA NUEVA UX) -->
         <div id="modal-creditos" class="modal-oculto">
             <!-- Paso 1: Preguntar -->
             <div class="modal-contenido" id="modal-step-1">
-                <h2 id="modal-titulo">ÔÜá´©Å Falla de Conexi├│n con IA</h2>
-                <p>El agente <strong id="modal-agent-name" style="color: #38bdf8;"></strong> no responde a la validaci├│n de contexto. ┬┐Ya has iniciado sesi├│n en la terminal de tu PC?</p>
+                <h2 id="modal-titulo">⚠️🤖 Falla de Conexión con IA</h2>
+                <p>El agente <strong id="modal-agent-name" style="color: #38bdf8;"></strong> no responde a la validación de contexto. ¿Ya has iniciado sesión en la terminal de tu PC?</p>
                 <div class="modal-botones">
-                    <button id="btn-auth-yes" class="btn-primario" style="background: #eab308; color:#000;">S├¡, ya estoy
+                    <button id="btn-auth-yes" class="btn-primario" style="background: #eab308; color:#000;">Sí, ya estoy
                         logueado</button>
                     <button id="btn-auth-no" class="btn-secundario" style="background: #38bdf8; color:#0f172a;">No / No
                         estoy seguro</button>
@@ -314,10 +314,10 @@
                     volver</button>
             </div>
 
-            <!-- Paso 2 (Si responde S├¡): No tiene cr├®ditos -->
+            <!-- Paso 2 (Si responde Sí): No tiene créditos -->
             <div class="modal-contenido" id="modal-step-yes" style="display:none;">
-                <h2>­ƒ¬Ö Sin Cr├®ditos en la IA</h2>
-                <p>Si ya est├ís logueado y sigue fallando, significa que tu cuota de la API se ha agotado. Necesitas
+                <h2>🪙 Sin Créditos en la IA</h2>
+                <p>Si ya estás logueado y sigue fallando, significa que tu cuota de la API se ha agotado. Necesitas
                     recargar saldo (tokens) en la consola web para usar el Modo Agente.</p>
                 <div class="modal-botones">
                     <button id="btn-login-ia" class="btn-primario">Ir a recargar saldo</button>
@@ -325,10 +325,10 @@
                 </div>
             </div>
 
-            <!-- Paso 3: L├¡mite de Cuota Alcanzado -->
+            <!-- Paso 3: Límite de Cuota Alcanzado -->
             <div class="modal-contenido" id="modal-step-quota" style="display:none;">
-                <h2 style="color: #ef4444;">ÔÅ│ L├¡mite de Cuota Alcanzado</h2>
-                <p>La IA informa que has alcanzado tu l├¡mite de cuota (Individual quota reached). Por favor, mejora tu suscripci├│n o espera <strong>45 minutos</strong> para que se restablezca autom├íticamente.</p>
+                <h2 style="color: #ef4444;">⏳ Límite de Cuota Alcanzado</h2>
+                <p>La IA informa que has alcanzado tu límite de cuota (Individual quota reached). Por favor, mejora tu suscripción o espera <strong>45 minutos</strong> para que se restablezca automáticamente.</p>
                 <div class="modal-botones">
                     <button id="btn-cerrar-modal-quota" class="btn-primario" style="background: #ef4444; color: #fff;">Entendido</button>
                 </div>
@@ -336,17 +336,47 @@
 
             <!-- Paso 4 (Si responde NO): Instrucciones de login -->
             <div class="modal-contenido" id="modal-step-no" style="display:none;">
-                <h2>­ƒöæ Requiere Inicio de Sesi├│n</h2>
+                <h2>🔑 Requiere Inicio de Sesión</h2>
                 <p>Ve a tu PC (Servidor), abre una ventana de consola (CMD o PowerShell) y escribe el siguiente comando:
                 </p>
                 <code id="cmd-instruccion"
                     style="display:block; background:#0f172a; padding:10px; border-radius:6px; color:#38bdf8; font-size:1.2rem; font-weight:bold; margin-bottom:15px; letter-spacing: 1px;">claude login</code>
-                <p style="font-size:0.85rem; color:#94a3b8; margin-bottom:15px;">Una vez completado el inicio de sesi├│n
-                    en la web que se abrir├í, vuelve aqu├¡ e intenta de nuevo.</p>
+                <p style="font-size:0.85rem; color:#94a3b8; margin-bottom:15px;">Una vez completado el inicio de sesión
+                    en la web que se abrirá, vuelve aquí e intenta de nuevo.</p>
                 <div class="modal-botones">
                     <button id="btn-cerrar-modal-3" class="btn-primario">Entendido, cerrar</button>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE BLOQUEO POR TRIAL EXPIRADO -->
+    <div id="licenseModal" class="startup-modal hidden" style="display: none; z-index: 9999999;">
+        <div class="startup-card" style="max-width: 440px; text-align: center;">
+            <div style="margin-bottom: 20px;">
+                <span class="material-icons-round" style="font-size: 3.5rem; color: #ef4444; display: block; margin-bottom: 12px;">lock</span>
+                <h2 style="font-size: 1.3rem; margin: 0 0 8px 0; color: #f8fafc; font-weight: 700;">Período de Prueba Finalizado</h2>
+                <p style="color: #94a3b8; font-size: 0.88rem; line-height: 1.5; margin: 0;">
+                    Tu período de prueba gratuito de <strong style="color: #f87171;">7 días</strong> ha expirado.
+                    Para seguir utilizando TFTE Voice Assistant, adquiere una licencia PRO.
+                </p>
+            </div>
+            <a href="https://tfte.com/voice-assistant" target="_blank" style="display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 12px 16px; background: linear-gradient(135deg, #0284c7, #2563eb); color: white; border: none; border-radius: 10px; font-size: 0.92rem; font-weight: 600; cursor: pointer; text-decoration: none; box-shadow: 0 4px 15px rgba(2, 132, 199, 0.3); transition: all 0.2s; margin-bottom: 16px; box-sizing: border-box;">
+                <span class="material-icons-round" style="font-size: 1.1rem;">shopping_cart</span>
+                Obtener Licencia PRO
+            </a>
+            <div style="width: 100%; height: 1px; background: rgba(255,255,255,0.08); margin: 16px 0;"></div>
+            <p style="color: #64748b; font-size: 0.78rem; margin: 0 0 10px 0;">¿Ya tienes una clave? Ingrésala aquí:</p>
+            <div style="display: flex; gap: 8px;">
+                <input type="text" id="licenseKeyInput" placeholder="TFTE-PRO-XXXXXXXX" style="flex: 1; background: rgba(2, 6, 23, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); padding: 10px 14px; border-radius: 10px; color: #f1f5f9; font-size: 0.88rem; outline: none; font-family: monospace; letter-spacing: 0.05em;">
+                <button id="verifyLicenseBtn" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); padding: 10px 16px; border-radius: 10px; cursor: pointer; font-size: 0.82rem; font-weight: 600; white-space: nowrap; transition: all 0.2s;">
+                    Validar Licencia
+                </button>
+            </div>
+            <p style="color: #475569; font-size: 0.7rem; margin-top: 14px;">
+                <span class="material-icons-round" style="font-size: 0.8rem; vertical-align: middle;">info</span>
+                La licencia se vincula a este equipo y no puede transferirse.
+            </p>
         </div>
     </div>
 
@@ -1044,11 +1074,11 @@
                 <span class="material-icons-round" style="font-size: 3rem; color: #f59e0b;">lock_clock</span>
                 <h2 style="font-size: 1.5rem; margin: 10px 0; color: white;">Trial Expirado</h2>
                 <p style="color: #94a3b8; font-size: 0.95rem; line-height: 1.5;">
-                    Tu prueba gratuita de 14 d├â┬¡as ha finalizado. Para seguir utilizando las funciones de Agente de IA y
+                    Tu prueba gratuita de 14 d├â¡as ha finalizado. Para seguir utilizando las funciones de Agente de IA y
                     Asistente de Voz, necesitas activar una licencia PRO.
                 </p>
                 <p style="color: #94a3b8; font-size: 0.95rem; margin-top: 10px;">
-                    <em>(La vista local de TFTE y Galer├â┬¡a siguen activas).</em>
+                    <em>(La vista local de TFTE y Galer├â¡a siguen activas).</em>
                 </p>
             </div>
 
@@ -1061,7 +1091,7 @@
             </div>
             <div style="margin-top: 15px;">
                 <a href="#" style="color: #94a3b8; font-size: 0.85rem; text-decoration: underline;">Comprar Licencia Pro
-                    (Pr├â┬│ximamente)</a>
+                    (Próximamente)</a>
             </div>
         </div>
     </div>
@@ -1094,7 +1124,7 @@
                 if (currentUpdate === null) {
                     currentUpdate = data.lastUpdate; // Calibra el radar la primera vez
                 } else if (currentUpdate !== data.lastUpdate) {
-                    console.log('├░┼©ÔÇØÔÇ× Cambios detectados por el radar. Recargando iframes est├â┬íticos...');
+                    console.log('├░┼©ÔÇØÔÇ× Cambios detectados por el radar. Recargando iframes estáticos...');
                     currentUpdate = data.lastUpdate;
 
                     // Recarga iframes visibles sin flash blanco (usa location.reload en vez de about:blank)
@@ -1135,7 +1165,7 @@
                     No existe un entorno de control (<strong>Project_Control.html</strong>) en este proyecto.
                 </p>
                 <p style="margin: 0; color: #94a3b8; font-size: 0.9rem; line-height: 1.4;">
-                    Se generar├í un archivo base con un <strong>constructor visual</strong> integrado, donde podr├ís crear y organizar niveles (Screens, Cards, Modales, Botones, etc.).
+                    Se generará un archivo base con un <strong>constructor visual</strong> integrado, donde podrás crear y organizar niveles (Screens, Cards, Modales, Botones, etc.).
                 </p>
             </div>
 

@@ -229,12 +229,11 @@ let cachedLicenseStatus = null;
 let lastLicenseCheck = 0;
 
 async function getLicenseStatus() {
-    // Si estamos en entorno de desarrollo local, bypass total de la licencia
+    console.log("[LICENSE DEBUG] Entrando a getLicenseStatus(). ENV=", process.env.ENV);
     if (process.env.ENV === 'development') {
         return { status: 'pro', daysLeft: 999, isPro: true };
     }
 
-    // Obtener MAC Address para vincular la licencia a hardware real
     const interfaces = os.networkInterfaces();
     let macs = [];
     for (const key in interfaces) {
@@ -247,71 +246,68 @@ async function getLicenseStatus() {
     const rawMacs = macs.sort().join('|') || os.hostname();
     const hwId = 'HWID-' + crypto.createHash('sha256').update(rawMacs).digest('hex').substring(0, 16);
 
-    // Usar caché si han pasado menos de 5 minutos
     if (cachedLicenseStatus && (Date.now() - lastLicenseCheck < 5 * 60 * 1000)) {
         return cachedLicenseStatus;
     }
 
-    if (!fs.existsSync(LICENSE_FILE)) {
-        const initialState = {
-            machineId: hwId,
-            startDate: new Date().toISOString(),
-            isPro: false,
-            licenseKey: null
-        };
-        fs.writeFileSync(LICENSE_FILE, JSON.stringify(initialState, null, 2), 'utf8');
-    }
-
-    const data = JSON.parse(fs.readFileSync(LICENSE_FILE, 'utf8'));
-
-    // Validación externa contra Base de Datos Central
     try {
         const supabaseUrl = process.env.SUPABASE_URL;
         const supabaseKey = process.env.SUPABASE_ANON_KEY;
 
         if (supabaseUrl && supabaseKey) {
-            const res = await fetch(`${supabaseUrl}/rest/v1/licenses?hwid=eq.${hwId}&select=is_active`, {
+            console.log("[LICENSE DEBUG] Consultando RPC check_license...");
+            const res = await fetch(`${supabaseUrl}/rest/v1/rpc/check_license`, {
+                method: 'POST',
                 headers: {
+                    'Content-Type': 'application/json',
                     'apikey': supabaseKey,
                     'Authorization': `Bearer ${supabaseKey}`
-                }
+                },
+                body: JSON.stringify({ p_hwid: hwId })
             });
-            const sbData = await res.json();
-
-            if (Array.isArray(sbData) && sbData.length > 0 && sbData[0].is_active === true) {
-                data.isPro = true;
-                fs.writeFileSync(LICENSE_FILE, JSON.stringify(data, null, 2), 'utf8');
-                cachedLicenseStatus = { status: 'pro', daysLeft: 0, isPro: true, message: "Licencia verificada online" };
+            console.log("[LICENSE DEBUG] Respuesta check_license HTTP:", res.status);
+            
+            if (res.ok) {
+                const sbData = await res.json();
+                console.log("[LICENSE DEBUG] Datos de Supabase:", sbData);
+                
+                cachedLicenseStatus = {
+                    status: sbData.status,
+                    daysLeft: sbData.days_left,
+                    isPro: sbData.is_pro,
+                    message: sbData.message
+                };
                 lastLicenseCheck = Date.now();
                 return cachedLicenseStatus;
             } else {
-                // Si el servidor dice que no es válida o no existe, revocamos
-                if (data.isPro) {
-                    data.isPro = false;
-                    fs.writeFileSync(LICENSE_FILE, JSON.stringify(data, null, 2), 'utf8');
-                }
+                const errText = await res.text();
+                console.log("[LICENSE DEBUG] Error de Supabase:", errText);
             }
         }
     } catch (e) {
-        // Silencioso, seguimos con validación local si el server está caído
+        console.error("[LICENSE DEBUG] Error de red:", e);
     }
 
+    console.log("[LICENSE DEBUG] FALLBACK OFFLINE LOCAL");
+    if (!fs.existsSync(LICENSE_FILE)) {
+        const initialState = { machineId: hwId, startDate: new Date().toISOString(), isPro: false, licenseKey: null };
+        fs.writeFileSync(LICENSE_FILE, JSON.stringify(initialState, null, 2), 'utf8');
+    }
+    const data = JSON.parse(fs.readFileSync(LICENSE_FILE, 'utf8'));
     if (data.isPro) {
-        cachedLicenseStatus = { status: 'pro', daysLeft: 0, isPro: true };
-    } else {
-        const start = new Date(data.startDate);
-        const now = new Date();
-        const diffTime = Math.abs(now - start);
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        const daysLeft = TRIAL_DAYS - diffDays;
-
-        if (daysLeft <= 0) {
-            cachedLicenseStatus = { status: 'expired', daysLeft: 0, isPro: false };
-        } else {
-            cachedLicenseStatus = { status: 'active', daysLeft, isPro: false };
-        }
+        cachedLicenseStatus = { status: 'pro', daysLeft: 999, isPro: true, message: "Licencia local verificada." };
+        lastLicenseCheck = Date.now();
+        return cachedLicenseStatus;
     }
-
+    const startDate = new Date(data.startDate);
+    const now = new Date();
+    const daysLeft = Math.max(0, 7 - Math.floor((now - startDate) / (1000 * 60 * 60 * 24)));
+    
+    if (daysLeft === 0) {
+        cachedLicenseStatus = { status: 'expired', daysLeft: 0, isPro: false, message: "Trial local expirado." };
+    } else {
+        cachedLicenseStatus = { status: 'trial', daysLeft, isPro: false, message: "Trial local activo." };
+    }
     lastLicenseCheck = Date.now();
     return cachedLicenseStatus;
 }
@@ -328,19 +324,56 @@ app.get('/api/license/status', async (req, res) => {
     res.json(await getLicenseStatus());
 });
 
-app.post('/api/license/verify', (req, res) => {
+app.post('/api/license/verify', async (req, res) => {
     const { key } = req.body;
-    // Simulación de API: acepta cualquier clave que empiece por TFTE-PRO-
-    if (key && key.startsWith('TFTE-PRO-')) {
-        if (fs.existsSync(LICENSE_FILE)) {
-            const data = JSON.parse(fs.readFileSync(LICENSE_FILE, 'utf8'));
-            data.isPro = true;
-            data.licenseKey = key;
-            fs.writeFileSync(LICENSE_FILE, JSON.stringify(data, null, 2), 'utf8');
-            return res.json({ ok: true, message: '¡Licencia activada con éxito!' });
+    if (!key) return res.status(400).json({ error: 'Clave no proporcionada.' });
+
+    try {
+        const hwId = await getHwId();
+        const supabaseUrl = process.env.SUPABASE_URL;
+        const supabaseKey = process.env.SUPABASE_ANON_KEY;
+
+        if (supabaseUrl && supabaseKey) {
+            // Llamar a la función RPC en Supabase para activar la licencia
+            const response = await fetch(`${supabaseUrl}/rest/v1/rpc/activate_license`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'apikey': supabaseKey,
+                    'Authorization': `Bearer ${supabaseKey}`
+                },
+                body: JSON.stringify({ p_key: key, p_hwid: hwId })
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data === true) {
+                // ¡Éxito! La licencia fue asignada a este HWID
+                const localData = fs.existsSync(LICENSE_FILE) ? JSON.parse(fs.readFileSync(LICENSE_FILE, 'utf8')) : {};
+                localData.isPro = true;
+                localData.licenseKey = key;
+                fs.writeFileSync(LICENSE_FILE, JSON.stringify(localData, null, 2), 'utf8');
+                return res.json({ ok: true, message: '¡Licencia activada con éxito en la nube!' });
+            } else {
+                return res.status(400).json({ error: data.message || 'La clave es inválida o ya está en uso por otro equipo.' });
+            }
+        } else {
+            // Fallback si no hay config de Supabase
+            if (key.startsWith('TFTE-PRO-')) {
+                if (fs.existsSync(LICENSE_FILE)) {
+                    const localData = JSON.parse(fs.readFileSync(LICENSE_FILE, 'utf8'));
+                    localData.isPro = true;
+                    localData.licenseKey = key;
+                    fs.writeFileSync(LICENSE_FILE, JSON.stringify(localData, null, 2), 'utf8');
+                    return res.json({ ok: true, message: '¡Licencia (Local) activada con éxito!' });
+                }
+            }
+            res.status(400).json({ error: 'Clave de licencia inválida.' });
         }
+    } catch (e) {
+        console.error("Error en verify license:", e);
+        res.status(500).json({ error: 'Error del servidor de licencias.' });
     }
-    res.status(400).json({ error: 'Clave de licencia inválida.' });
 });
 // --- FIN SISTEMA DE LICENCIAS ---
 
@@ -635,13 +668,23 @@ app.get('/api/select-folder', (req, res) => {
     const tempPs1 = path.join(os.tmpdir(), 'folder_picker_' + Date.now() + '.ps1');
     const tempOut = path.join(os.tmpdir(), 'folder_out_' + Date.now() + '.txt');
     const psCode = `
-Add-Type -AssemblyName System.windows.forms
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+using System.Windows.Forms;
+public class ForegroundWindow : IWin32Window {
+    [DllImport("user32.dll")] static extern IntPtr GetForegroundWindow();
+    [DllImport("user32.dll")] static extern bool SetForegroundWindow(IntPtr hWnd);
+    public IntPtr Handle { get; private set; }
+    public ForegroundWindow() { Handle = GetForegroundWindow(); }
+}
+"@
+$owner = New-Object ForegroundWindow
 $f = New-Object System.Windows.Forms.FolderBrowserDialog
 $f.Description = 'Selecciona la carpeta'
 $f.ShowNewFolderButton = $true
-$form = New-Object System.Windows.Forms.Form
-$form.TopMost = $true
-if ($f.ShowDialog($form) -eq [System.Windows.Forms.DialogResult]::OK) {
+if ($f.ShowDialog($owner) -eq [System.Windows.Forms.DialogResult]::OK) {
     Set-Content -Path '${tempOut}' -Value $f.SelectedPath
 }
     `.trim();
@@ -1335,7 +1378,7 @@ try {
 // ==========================================
 // ARRANQUE DEL SERVIDOR
 // ==========================================
-const server = app.listen(port, () => {
+const server = app.listen(port, '127.0.0.1', () => {
     console.log(`🚀 Servidor escuchando en http://localhost:${port}`);
 });
 

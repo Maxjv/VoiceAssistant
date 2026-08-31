@@ -1840,7 +1840,7 @@ async function checkLicenseStatus() {
                 licenseModal.style.display = 'flex';
             }
             if (statusText) statusText.textContent = 'Trial Expirado';
-        } else if (data.status === 'active') {
+        } else if (data.status === 'active' || data.status === 'trial') {
             // Mostrar días restantes en el side-rail
             const contextLabel = document.getElementById('contextStatusLabel');
             if (contextLabel) {
