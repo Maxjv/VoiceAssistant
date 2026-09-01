@@ -1,13 +1,13 @@
 [Setup]
-AppName=TFTE Voice Assistant
-AppVersion=1.1
-DefaultDirName={localappdata}\TFTE\VoiceAssistant
+AppName=AnywhereDesign
+AppVersion=1.0
+DefaultDirName={localappdata}\AnywhereDesign
 OutputDir=.\Output
-OutputBaseFilename=Instalar_Asistente_TFTE
+OutputBaseFilename=Instalar_AnywhereDesign
 Compression=lzma
 SolidCompression=yes
 PrivilegesRequired=lowest
-DisableDirPage=yes 
+DisableDirPage=no 
 LicenseFile=licencia.txt 
 
 [Files]
@@ -21,9 +21,12 @@ Source: "dist_production\watcher\*"; DestDir: "{app}\watcher"; Flags: ignorevers
 Source: "dist_production\public\*"; DestDir: "{app}\public"; Flags: ignoreversion recursesubdirs
 Source: "dist_production\node_modules\*"; DestDir: "{app}\node_modules"; Flags: ignoreversion recursesubdirs
 
+[Run]
+Filename: "powershell.exe"; Parameters: "-WindowStyle Hidden -ExecutionPolicy Bypass -Command ""npm install -g @google/antigravity @anthropic-ai/claude-code --force"""; StatusMsg: "Descargando e instalando Agentes de IA en tu sistema..."; Flags: runhidden waituntilterminated
+
 [Icons]
-Name: "{autoprograms}\TFTE Voice Assistant"; Filename: "powershell.exe"; Parameters: "-ExecutionPolicy Bypass -WindowStyle Hidden -File ""{app}\launcher.ps1"""; IconFilename: "{app}\VoiceAssistant_TFTE.exe"
-Name: "{userdesktop}\Modo Rescate TFTE"; Filename: "{app}\Tfte_Rescue_Panel.pyw"; IconFilename: "{app}\VoiceAssistant_TFTE.exe"
+Name: "{autoprograms}\AnywhereDesign"; Filename: "powershell.exe"; Parameters: "-ExecutionPolicy Bypass -WindowStyle Hidden -File ""{app}\launcher.ps1"""; IconFilename: "{app}\VoiceAssistant_TFTE.exe"
+Name: "{userdesktop}\Modo Rescate AnywhereDesign"; Filename: "{app}\Tfte_Rescue_Panel.pyw"; IconFilename: "{app}\VoiceAssistant_TFTE.exe"
 
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}\node_modules"
@@ -71,11 +74,11 @@ begin
     'Personaliza tu Asistente',
     'Introduce el nombre de la aplicacion que vas a diseñar.');
   ProjectNamePage.Add('Nombre del Proyecto:', False);
-  ProjectNamePage.Values[0] := 'Mi Aplicacion Web';
+  ProjectNamePage.Values[0] := 'Mi Proyecto';
 
   ContextPage := CreateInputDirPage(ProjectNamePage.ID,
     'Carpeta de Trabajo', 'Selecciona el entorno de trabajo',
-    'Pulsa "Examinar" para buscar la carpeta de tu proyecto. El sistema detectara la raiz de React automaticamente.',
+    'Pulsa "Examinar" para buscar la carpeta de tu proyecto. El sistema detectara si es React o Web automáticamente.',
     False, '');
   ContextPage.Add('');
   ContextPage.Values[0] := 'C:\';
@@ -152,7 +155,7 @@ end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
 var
-  EnvContent, LauncherScript, OpenBrowserScript: String;
+  EnvContent, LauncherScript, OpenBrowserScript, WaitAppScript: String;
   ResultCode: Integer;
 begin
   if CurStep = ssPostInstall then
@@ -173,39 +176,27 @@ begin
                   'ENV=production';
     SaveStringToFile(ExpandConstant('{app}\.env'), EnvContent, False);
 
+    // PRE-INSTALAR DEPENDENCIAS DEL PROYECTO INVISIBLEMENTE
+    WizardForm.StatusLabel.Caption := 'Preparando dependencias de tu proyecto (esto puede tardar unos minutos)...';
+    Exec('cmd.exe', '/c npm install', Trim(ContextPage.Values[0]), SW_HIDE, ewWaitUntilTerminated, ResultCode);
+    
     // LANZADOR VISUAL INTEGRADO
-    LauncherScript := '$Host.UI.RawUI.WindowTitle = "TFTE Voice Assistant - Iniciando..."' + #13#10 +
+    LauncherScript := '$Host.UI.RawUI.WindowTitle = "AnywhereDesign - Iniciando..."' + #13#10 +
                       'Write-Host ""' + #13#10 +
                       'Write-Host " ==================================================" -ForegroundColor Cyan' + #13#10 +
-                      'Write-Host "        INICIANDO TFTE VOICE ASSISTANT" -ForegroundColor White' + #13#10 +
+                      'Write-Host "        INICIANDO ANYWHEREDESIGN" -ForegroundColor White' + #13#10 +
                       'Write-Host " ==================================================" -ForegroundColor Cyan' + #13#10 +
                       'Write-Host ""' + #13#10 +
                       '$root = $PSScriptRoot' + #13#10 +
                       'if (-not $root) { $root = Split-Path -Parent $MyInvocation.MyCommand.Definition }' + #13#10 +
-                      'Write-Host " [1/5] Comprobando procesos activos..." -ForegroundColor Yellow' + #13#10 +
+                      'Write-Host " [1/3] Comprobando procesos activos..." -ForegroundColor Yellow' + #13#10 +
                       '$isAppRunning = Get-Process -Name "VoiceAssistant_TFTE" -ErrorAction SilentlyContinue' + #13#10 +
                       'if (-not $isAppRunning) {' + #13#10 +
                       '    Remove-Item (Join-Path $root "current-url.txt") -ErrorAction SilentlyContinue' + #13#10 +
-                      '    Write-Host " [2/5] Levantando servidor, app React y Watchdog..." -ForegroundColor Yellow' + #13#10 +
+                      '    Write-Host " [2/3] Levantando servidor y túnel seguro..." -ForegroundColor Yellow' + #13#10 +
                       '    Start-Process "powershell.exe" -ArgumentList "-ExecutionPolicy Bypass -WindowStyle Hidden -File `"$root\watchdog.ps1`"" -WindowStyle Hidden' + #13#10 +
                       '}' + #13#10 +
-                      'Write-Host " [3/5] Verificando dependencias de IA (Antigravity)..." -ForegroundColor Yellow' + #13#10 +
-                      '$agyPath1 = Join-Path $env:LOCALAPPDATA "agy\bin\agy.exe"' + #13#10 +
-                      '$agyPath2 = (Get-Command agy.exe -ErrorAction SilentlyContinue).Path' + #13#10 +
-                      'if (-not (Test-Path $agyPath1) -and -not $agyPath2) {' + #13#10 +
-                      '    Write-Host ""' + #13#10 +
-                      '    Write-Host " [ALERTA] Antigravity CLI (agy) NO DETECTADO." -ForegroundColor Red' + #13#10 +
-                      '    Write-Host " Intentando instalar dependencias automaticamente via npm..." -ForegroundColor Cyan' + #13#10 +
-                      '    npm i -g @google/antigravity -f' + #13#10 +
-                      '    $agyPath2 = (Get-Command agy.exe -ErrorAction SilentlyContinue).Path' + #13#10 +
-                      '    if (-not (Test-Path $agyPath1) -and -not $agyPath2) {' + #13#10 +
-                      '        Write-Host " [ERROR CRITICO] Fallo la instalacion automatica. Necesitas NodeJS para instalar el Agente de IA." -ForegroundColor Red' + #13#10 +
-                      '        Write-Host " Presiona cualquier tecla para salir..." -ForegroundColor Gray' + #13#10 +
-                      '        $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")' + #13#10 +
-                      '        exit' + #13#10 +
-                      '    }' + #13#10 +
-                      '}' + #13#10 +
-                      'Write-Host " [4/5] Enganchando el tunel de Cloudflare..." -ForegroundColor Yellow' + #13#10 +
+                      'Write-Host " [3/3] Enganchando el túnel de Cloudflare..." -ForegroundColor Yellow' + #13#10 +
                       '$counter = 0; $url = $null' + #13#10 +
                       'while ($counter -lt 30) {' + #13#10 +
                       '    $counter++' + #13#10 +
@@ -216,14 +207,15 @@ begin
                       '    }' + #13#10 +
                       '}' + #13#10 +
                       'if ($url) {' + #13#10 +
-                      '    Write-Host " [EXITO] Tunel conectado." -ForegroundColor Cyan' + #13#10 +
+                      '    Write-Host " [EXITO] Túnel conectado." -ForegroundColor Cyan' + #13#10 +
                       '} else {' + #13#10 +
-                      '    Write-Host " [ERROR] Fallo Cloudflare." -ForegroundColor Red' + #13#10 +
+                      '    Write-Host " [ERROR] Tiempo de espera agotado para Cloudflare." -ForegroundColor Red' + #13#10 +
                       '}';
     SaveStringToFile(ExpandConstant('{app}\launcher.ps1'), LauncherScript, False);
 
-    // SCRIPT ROBUSTO PARA ABRIR NAVEGADOR
+    // SCRIPT ROBUSTO PARA ABRIR NAVEGADOR (CON PAUSA DE 8 SEGUNDOS)
     OpenBrowserScript := '$root = $PSScriptRoot' + #13#10 +
+                         'Start-Sleep -Seconds 8' + #13#10 +
                          '$urlPath = Join-Path $root "current-url.txt"' + #13#10 +
                          'if (Test-Path $urlPath) { $url = Get-Content $urlPath } else { exit }' + #13#10 +
                          '$context = ""' + #13#10 +
@@ -235,15 +227,33 @@ begin
                          'Start-Process "$url/?context=$context"';
     SaveStringToFile(ExpandConstant('{app}\open_browser.ps1'), OpenBrowserScript, False);
 
-    // Esperar a que el lanzador termine de obtener la URL de Cloudflare antes de mostrar el mensaje final
+    // Ejecutar el lanzador (Cloudflare) y esperar a que termine de conectar
     Exec('powershell.exe', ExpandConstant('-ExecutionPolicy Bypass -WindowStyle Hidden -File "{app}\launcher.ps1"'), '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
 
-    MsgBox('¡Instalacion completada con exito!' + #13#10#13#10 +
-           'El Asistente esta listo. El proyecto tardara unos instantes en compilar en segundo plano.' + #13#10#13#10 +
+    // NUEVO: BLOQUEAR EL INSTALADOR HASTA QUE REACT/VITE COMPILE AL 100%
+    WizardForm.StatusLabel.Caption := 'Compilando tu proyecto en segundo plano. Esto tomará un minuto...';
+    
+    WaitAppScript := '$url = "http://127.0.0.1:4000/api/check-target"' + #13#10 +
+                     '$counter = 0' + #13#10 +
+                     'while ($counter -lt 60) {' + #13#10 +
+                     '    try {' + #13#10 +
+                     '        $response = Invoke-RestMethod -Uri $url -Method Get -ErrorAction Stop' + #13#10 +
+                     '        if ($response.ready -eq $true) { break }' + #13#10 +
+                     '    } catch { }' + #13#10 +
+                     '    $counter++' + #13#10 +
+                     '    Start-Sleep -Seconds 2' + #13#10 +
+                     '}';
+    SaveStringToFile(ExpandConstant('{app}\wait_app.ps1'), WaitAppScript, False);
+    
+    // Esta línea congela la barra del instalador hasta que el script termine
+    Exec('powershell.exe', ExpandConstant('-ExecutionPolicy Bypass -WindowStyle Hidden -File "{app}\wait_app.ps1"'), '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+    
+    MsgBox('¡Instalación completada con éxito!' + #13#10#13#10 +
+           'El Asistente ha detectado tu proyecto y está listo para funcionar.' + #13#10#13#10 +
            '🔒 IMPORTANTE: El PIN de seguridad para acceder a la interfaz es: 1234' + #13#10#13#10 +
-           'Al presionar Aceptar, se abrira tu navegador.', mbInformation, MB_OK);
+           'Al presionar Aceptar, se abrirá tu navegador web automáticamente.', mbInformation, MB_OK);
 
-    // Lanzar el navegador al instante de hacer clic en OK usando el script robusto
+    // Lanzar el navegador inmediatamente al cerrar el Popup
     Exec('powershell.exe', ExpandConstant('-ExecutionPolicy Bypass -WindowStyle Hidden -File "{app}\open_browser.ps1"'), '', SW_HIDE, ewNoWait, ResultCode);
   end;
 end;

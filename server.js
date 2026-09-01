@@ -8,6 +8,7 @@ const os = require('os');
 const { createProxyMiddleware } = require('http-proxy-middleware');
 const { MsEdgeTTS, OUTPUT_FORMAT } = require('msedge-tts');
 const { exec } = require('child_process');
+const http = require('http');
 
 // RUTA BASE REAL (Para escribir archivos: .env, watcher, etc.)
 const BASE_DIR = process.pkg ? path.dirname(process.execPath) : process.cwd();
@@ -82,7 +83,7 @@ app.use((req, res, next) => {
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>TFTE - Sincronización</title>
+            <title>AnywhereDesign - Sincronización</title>
             <style>
                 body {
                     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -153,7 +154,7 @@ app.use((req, res, next) => {
         </head>
         <body>
             <div class="sync-card">
-                <h2>TFTE Assistant</h2>
+                <h2>AnywhereDesign</h2>
                 <p>Verificación de Instancia</p>
                 <div class="display-box" id="pinDisplay"></div>
                 <div class="keypad-grid">
@@ -266,11 +267,11 @@ async function getLicenseStatus() {
                 body: JSON.stringify({ p_hwid: hwId })
             });
             console.log("[LICENSE DEBUG] Respuesta check_license HTTP:", res.status);
-            
+
             if (res.ok) {
                 const sbData = await res.json();
                 console.log("[LICENSE DEBUG] Datos de Supabase:", sbData);
-                
+
                 cachedLicenseStatus = {
                     status: sbData.status,
                     daysLeft: sbData.days_left,
@@ -302,7 +303,7 @@ async function getLicenseStatus() {
     const startDate = new Date(data.startDate);
     const now = new Date();
     const daysLeft = Math.max(0, 7 - Math.floor((now - startDate) / (1000 * 60 * 60 * 24)));
-    
+
     if (daysLeft === 0) {
         cachedLicenseStatus = { status: 'expired', daysLeft: 0, isPro: false, message: "Trial local expirado." };
     } else {
@@ -359,7 +360,7 @@ app.post('/api/license/verify', async (req, res) => {
             }
         } else {
             // Fallback si no hay config de Supabase
-            if (key.startsWith('TFTE-PRO-')) {
+            if (key.startsWith('ANYWHERE-PRO-')) {
                 if (fs.existsSync(LICENSE_FILE)) {
                     const localData = JSON.parse(fs.readFileSync(LICENSE_FILE, 'utf8'));
                     localData.isPro = true;
@@ -377,28 +378,136 @@ app.post('/api/license/verify', async (req, res) => {
 });
 // --- FIN SISTEMA DE LICENCIAS ---
 
-function detectUserAppPort() {
-    try {
-        const pkgPath = path.join(ROOT_DIR, 'package.json');
-        if (fs.existsSync(pkgPath)) {
-            const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
-            const startScript = (pkg.scripts && (pkg.scripts.start || pkg.scripts.dev)) || '';
-            const match = startScript.match(/(?:--port\s*=?|PORT=)(\d+)/i);
-            if (match && match[1]) {
-                console.log(`[Auto-Port]: Detectado puerto ${match[1]} desde package.json`);
-                return parseInt(match[1], 10);
-            }
+// --- ESCÁNER DE ARRANQUE (AUTO-DETECTA WEB O REACT AL INICIAR) ---
+// --- ESCÁNER DE ARRANQUE (OMNIDIRECCIONAL: ARRIBA Y ABAJO) ---
+// --- ESCÁNER Y AUTO-LANZADOR UNIVERSAL (CERO CLICS) ---
+let activeAppProcess = null;
+
+function detectAndLaunchProject(startDir) {
+    let isNodeProject = false;
+    let targetPort = 3000;
+    let finalDir = startDir;
+
+    // Escáner agnóstico: no le importa si es React, Vue o Angular. Solo busca package.json
+    const checkPkg = (p) => {
+        if (fs.existsSync(p)) {
+            try { return JSON.parse(fs.readFileSync(p, 'utf-8')); } catch (e) { }
         }
-    } catch (e) {
-        console.warn('[Auto-Port]: No se pudo leer package.json, usando puerto por defecto.');
+        return null;
+    };
+
+    let pkg = checkPkg(path.join(startDir, 'package.json'));
+
+    // Si no está ahí, buscar hacia arriba (padres)
+    if (!pkg) {
+        let parentDir = path.dirname(startDir);
+        while (startDir !== parentDir) {
+            pkg = checkPkg(path.join(parentDir, 'package.json'));
+            if (pkg) { finalDir = parentDir; break; }
+            startDir = parentDir;
+            parentDir = path.dirname(startDir);
+        }
     }
-    return 3000;
+
+    // Si no está, buscar hacia abajo (1 nivel)
+    if (!pkg) {
+        try {
+            const subdirs = fs.readdirSync(startDir, { withFileTypes: true }).filter(d => d.isDirectory() && d.name !== 'node_modules');
+            for (const sub of subdirs) {
+                pkg = checkPkg(path.join(startDir, sub.name, 'package.json'));
+                if (pkg) { finalDir = path.join(startDir, sub.name); break; }
+            }
+        } catch (e) { }
+    }
+
+    if (pkg) {
+        isNodeProject = true;
+        const deps = { ...(pkg.dependencies || {}), ...(pkg.devDependencies || {}) };
+        const scripts = pkg.scripts || {};
+
+        // Auto-detectar puerto
+        if (deps['vite']) targetPort = 5173;
+        else {
+            const startScript = scripts.dev || scripts.start || '';
+            const match = startScript.match(/(?:--port\s*=?|PORT=)(\d+)/i);
+            if (match && match[1]) targetPort = parseInt(match[1], 10);
+        }
+
+        // =========================================================
+        // LA MAGIA AUTOMÁTICA: LEVANTAR EL SERVIDOR DEL USUARIO
+        // =========================================================
+        console.log(`[Auto-Launch] Proyecto Node detectado en ${finalDir}. Arrancando automáticamente...`);
+
+        // Matar cualquier proceso previo si existe
+        if (activeAppProcess) {
+            try { exec(`taskkill /pid ${activeAppProcess.pid} /t /f`); } catch (e) { }
+        }
+
+        const installCmd = fs.existsSync(path.join(finalDir, 'node_modules')) ? '' : 'npm install && ';
+        const runCmd = scripts.dev ? 'npm run dev' : (scripts.start ? 'npm start' : '');
+
+        if (runCmd) {
+            // Ejecutamos en segundo plano, BLOQUEAMOS pestañas y le FORZAMOS su propio puerto
+            activeAppProcess = exec(`${installCmd}${runCmd}`, {
+                cwd: finalDir,
+                env: { ...process.env, BROWSER: 'none', PORT: targetPort }
+            });
+            activeAppProcess.stdout.on('data', (d) => console.log('[App]', d.trim()));
+            activeAppProcess.stderr.on('data', (d) => console.error('[App]', d.trim()));
+        }
+    }
+
+    return { type: isNodeProject ? 'node' : 'web', port: targetPort, dir: finalDir };
 }
 
-const TARGET_PORT = detectUserAppPort();
+const projectInfo = detectAndLaunchProject(ROOT_DIR);
+const PROJECT_TYPE = projectInfo.type;
+let TARGET_PORT = projectInfo.port;
+
+// Si NO es un proyecto Node (no hay package.json), asumimos Web Estática
+if (PROJECT_TYPE === 'web') {
+    TARGET_PORT = 8080;
+    const webApp = express();
+
+    // Auto-detectar si el index.html está en root, /public o /dist
+    let staticDir = ROOT_DIR;
+    if (!fs.existsSync(path.join(staticDir, 'index.html'))) {
+        if (fs.existsSync(path.join(ROOT_DIR, 'public', 'index.html'))) staticDir = path.join(ROOT_DIR, 'public');
+        else if (fs.existsSync(path.join(ROOT_DIR, 'dist', 'index.html'))) staticDir = path.join(ROOT_DIR, 'dist');
+    }
+
+    webApp.use(express.static(staticDir));
+
+    webApp.use((req, res) => {
+        res.send(`<div style="color:#94a3b8; font-family:sans-serif; text-align:center; padding:50px; background:#0f172a; height:100vh; box-sizing:border-box;">
+            <h2 style="color:#38bdf8;">Proyecto Web Estático</h2>
+            <p>El servidor está activo, pero no se encontró un <b>index.html</b> en esta ruta.</p>
+            <p style="font-size:0.8rem; background:rgba(0,0,0,0.3); padding:10px; border-radius:8px; display:inline-block;">Ruta: ${staticDir}</p>
+        </div>`);
+    });
+    webApp.listen(TARGET_PORT, '127.0.0.1', () => console.log(`[Sistema] Servidor Web Interno listo en ${TARGET_PORT}`));
+}
 
 app.use(cors());
 app.use(express.json());
+
+// Endpoint para que el Frontend sepa en qué tipo de proyecto está
+app.get('/api/project-info', (req, res) => {
+    res.json({ type: PROJECT_TYPE, name: process.env.PROJECT_NAME || 'Mi Proyecto' });
+});
+
+// Endpoint de Autenticación Cero Fricción
+app.post('/api/auth-cli', (req, res) => {
+    const cmd = req.body.backend === 'claude' ? 'claude login' : 'agy';
+
+    // Ejecuta "start cmd /k" para que se abra una ventana real y visible 
+    // donde el usuario pueda ver el proceso de Login y autorizar en su navegador.
+    exec(`start cmd /k "${cmd}"`, (err) => {
+        if (err) console.error("Error abriendo CMD de login:", err);
+    });
+
+    res.json({ ok: true, message: "Consola de Login abierta. Revisa tu navegador." });
+});
 
 // CORRECCIÓN ENOENT: Usamos __dirname para leer el frontend de adentro del .exe
 app.use(express.static(path.join(__dirname, 'public')));
@@ -406,11 +515,50 @@ app.use(express.static(path.join(__dirname, 'public')));
 const PREVIEW_DIR = ROOT_DIR;
 app.use('/preview', express.static(PREVIEW_DIR));
 
+// Sensor estricto y SEGURO (Evita crash por doble respuesta)
+app.get('/api/check-target', (req, res) => {
+    const request = http.get(`http://127.0.0.1:${TARGET_PORT}/`, (response) => {
+        response.on('data', () => { });
+        response.on('end', () => {
+            if (!res.headersSent) res.json({ ready: response.statusCode >= 200 && response.statusCode < 400 });
+        });
+    }).on('error', (err) => {
+        if (!res.headersSent) res.json({ ready: false });
+    });
+
+    // Si React está compilando, la petición colgará. A los 1.5s abortamos seguro.
+    request.setTimeout(1500, () => {
+        request.destroy();
+        if (!res.headersSent) res.json({ ready: false });
+    });
+});
+
 app.use('/react', createProxyMiddleware({
     target: `http://127.0.0.1:${TARGET_PORT}`,
     changeOrigin: true,
     pathRewrite: { '^/react': '/' },
-    ws: true
+    ws: true,
+    onError: (err, req, res) => {
+        if (!res.headersSent) {
+            res.writeHead(200, { 'Content-Type': 'text/html' });
+            res.end(`
+                <div style="background-color:#0f172a; color:white; font-family:sans-serif; text-align:center; height:100vh; display:flex; flex-direction:column; justify-content:center; align-items:center;">
+                    <h2 style="color:#38bdf8;">Levantando Servidor...</h2>
+                    <p style="color:#94a3b8;">Tu proyecto se está compilando en segundo plano. Tomará unos instantes.</p>
+                    <div style="width: 40px; height: 40px; border: 4px solid rgba(56, 189, 248, 0.3); border-top-color: #38bdf8; border-radius: 50%; animation: spin 1s linear infinite; margin-top: 20px;"></div>
+                    <style>@keyframes spin { to { transform: rotate(360deg); } }<\/style>
+                    <script>
+                        setInterval(() => {
+                            fetch('/api/check-target')
+                                .then(r => r.json())
+                                .then(d => { if (d.ready) location.reload(); })
+                                .catch(() => {});
+                        }, 2000);
+                    <\/script>
+                </div>
+            `);
+        }
+    }
 }));
 
 app.get('/', (req, res) => {
@@ -429,56 +577,42 @@ app.post('/api/set-context', (req, res) => {
     const { contextPath, projectName } = req.body;
     if (!contextPath) return res.status(400).json({ error: 'Contexto requerido' });
 
-    // Modificar el .env real en disco (usando BASE_DIR)
     const envFile = path.join(BASE_DIR, '.env');
+    let projectType = 'web'; // Por defecto asumimos Web Estática
 
     try {
-        let contextChanged = false;
-        if (fs.existsSync(envFile)) {
-            let envData = fs.readFileSync(envFile, 'utf8');
-            if (envData.match(/^CONTEXT_PATH=.*$/m)) {
-                const currentContext = envData.match(/^CONTEXT_PATH=(.*)$/m)[1];
-                if (currentContext !== contextPath) {
-                    envData = envData.replace(/^CONTEXT_PATH=.*$/m, `CONTEXT_PATH=${contextPath}`);
-                    contextChanged = true;
+        // 1. Detección Inteligente de React/Vite/Next
+        const pkgPath = path.join(contextPath, 'package.json');
+        if (fs.existsSync(pkgPath)) {
+            try {
+                const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+                const deps = { ...(pkg.dependencies || {}), ...(pkg.devDependencies || {}) };
+                if (deps['react'] || deps['next'] || deps['vite']) {
+                    projectType = 'react';
                 }
-            } else {
-                envData += `\nCONTEXT_PATH=${contextPath}`;
-                contextChanged = true;
-            }
-
-            if (projectName) {
-                if (envData.match(/^PROJECT_NAME=.*$/m)) {
-                    const currentProjectName = envData.match(/^PROJECT_NAME=(.*)$/m)[1];
-                    if (currentProjectName !== projectName) {
-                        envData = envData.replace(/^PROJECT_NAME=.*$/m, `PROJECT_NAME=${projectName}`);
-                        contextChanged = true;
-                    }
-                } else {
-                    envData += `\nPROJECT_NAME=${projectName}`;
-                    contextChanged = true;
-                }
-            }
-            if (contextChanged) {
-                fs.writeFileSync(envFile, envData, 'utf8');
-            }
-        } else {
-            let newEnvData = `CONTEXT_PATH=${contextPath}\n`;
-            if (projectName) newEnvData += `PROJECT_NAME=${projectName}\n`;
-            fs.writeFileSync(envFile, newEnvData, 'utf8');
-            contextChanged = true;
+            } catch (e) { console.warn("Aviso: package.json no es un JSON válido."); }
         }
 
-        res.json({ ok: true });
+        // 2. Modificación limpia del .env
+        let envData = fs.existsSync(envFile) ? fs.readFileSync(envFile, 'utf8') : '';
+        const updateEnv = (key, val) => {
+            const regex = new RegExp(`^${key}=.*$`, 'm');
+            if (regex.test(envData)) envData = envData.replace(regex, `${key}=${val}`);
+            else envData += `\n${key}=${val}`;
+        };
 
-        if (contextChanged) {
-            setTimeout(() => {
-                console.log(`[Sistema] Cambiando contexto a: ${contextPath}. Reiniciando motores...`);
-                exec('taskkill /F /IM node.exe', () => {
-                    process.exit(0);
-                });
-            }, 1500);
-        }
+        updateEnv('CONTEXT_PATH', contextPath);
+        if (projectName) updateEnv('PROJECT_NAME', projectName);
+        updateEnv('PROJECT_TYPE', projectType);
+
+        fs.writeFileSync(envFile, envData.trim() + '\n', 'utf8');
+        res.json({ ok: true, type: projectType });
+
+        // 3. Reiniciar motor
+        setTimeout(() => {
+            console.log(`[Sistema] Cambiando a ${projectType.toUpperCase()} en: ${contextPath}. Reiniciando...`);
+            exec('taskkill /F /IM node.exe', () => process.exit(0));
+        }, 1500);
 
     } catch (err) {
         console.error("Error modificando .env:", err);
@@ -662,91 +796,49 @@ app.get('/api/browse', (req, res) => {
     }
 });
 
-app.get('/api/select-folder', (req, res) => {
-    const os = require('os');
+app.get('/api/explore-folders', (req, res) => {
+    const fs = require('fs');
     const path = require('path');
-    const tempPs1 = path.join(os.tmpdir(), 'folder_picker_' + Date.now() + '.ps1');
-    const tempOut = path.join(os.tmpdir(), 'folder_out_' + Date.now() + '.txt');
-    const psCode = `
-Add-Type -AssemblyName System.Windows.Forms
-Add-Type @"
-using System;
-using System.Runtime.InteropServices;
-using System.Windows.Forms;
-public class ForegroundWindow : IWin32Window {
-    [DllImport("user32.dll")] static extern IntPtr GetForegroundWindow();
-    [DllImport("user32.dll")] static extern bool SetForegroundWindow(IntPtr hWnd);
-    public IntPtr Handle { get; private set; }
-    public ForegroundWindow() { Handle = GetForegroundWindow(); }
-}
-"@
-$owner = New-Object ForegroundWindow
-$f = New-Object System.Windows.Forms.FolderBrowserDialog
-$f.Description = 'Selecciona la carpeta'
-$f.ShowNewFolderButton = $true
-if ($f.ShowDialog($owner) -eq [System.Windows.Forms.DialogResult]::OK) {
-    Set-Content -Path '${tempOut}' -Value $f.SelectedPath
-}
-    `.trim();
+    const target = req.query.dir || '';
 
     try {
-        const fs = require('fs');
-        fs.writeFileSync(tempPs1, psCode);
-        const { exec } = require('child_process');
-        exec('powershell.exe -STA -WindowStyle Hidden -ExecutionPolicy Bypass -File "' + tempPs1 + '"', { timeout: 60000 }, (err) => {
-            try { fs.unlinkSync(tempPs1); } catch (e) { }
+        if (!target) {
+            // Si está vacío, le mostramos los discos duros locales (C:\, D:\)
+            const { execSync } = require('child_process');
+            let drives = [];
             try {
-                if (fs.existsSync(tempOut)) {
-                    const p = fs.readFileSync(tempOut, 'utf8').trim();
-                    fs.unlinkSync(tempOut);
-                    if (p) return res.json({ path: p });
-                }
-            } catch (e) { }
-            res.json({ error: 'Cancelado o no se selecciono nada' });
-        });
+                const stdout = execSync('wmic logicaldisk get name').toString();
+                drives = stdout.split('\n')
+                    .map(d => d.trim())
+                    .filter(d => d.length === 2 && d.endsWith(':'))
+                    .map(d => d + '\\');
+            } catch (e) {
+                drives = ['C:\\']; // Fallback de seguridad
+            }
+            return res.json({ current: '', folders: drives });
+        }
+
+        // Navegar dentro de la carpeta solicitada
+        const resolved = path.resolve(target);
+        const entries = fs.readdirSync(resolved, { withFileTypes: true });
+
+        // Filtramos para mostrar solo carpetas (ocultando archivos y carpetas de sistema bloqueadas)
+        const folders = entries
+            .filter(e => e.isDirectory() && !e.name.startsWith('$') && !e.name.startsWith('System Volume Information'))
+            .map(e => e.name)
+            .sort((a, b) => a.localeCompare(b));
+
+        // Determinar quién es la carpeta padre (para el botón de "Volver atrás")
+        const parent = path.dirname(resolved) === resolved ? '' : path.dirname(resolved);
+
+        res.json({ current: resolved, parent: parent, folders });
     } catch (e) {
-        res.status(500).json({ error: 'Error interno: ' + e.message });
+        // Si hay error de permisos de Windows, lo devolvemos suavemente
+        res.status(500).json({ error: 'Carpeta bloqueada por Windows o inaccesible.' });
     }
 });
 
-app.post('/api/init-react', (req, res) => {
-    const root = (process.env.CONTEXT_PATH || '').replace(/'/g, "''");
-    if (!root || !fs.existsSync(root)) return res.status(400).json({ error: "CONTEXT_PATH inválido" });
 
-    const batPath = path.join(root, 'init-react.bat');
-    const batContent = `
-@echo off
-color 0B
-echo Iniciando creacion de Proyecto React (Vite)...
-call npm create vite@latest webapp -- --template react
-if exist "webapp" (
-    cd webapp
-    color 0E
-    echo.
-    echo Instalando dependencias (esto tomara unos minutos)...
-    call npm install
-    color 0A
-    echo.
-    echo Finalizado exitosamente! Tu asistente lo detectara en breve.
-) else (
-    color 0C
-    echo Error al crear la carpeta webapp.
-)
-echo.
-pause
-del "%~f0"
-    `.trim();
-
-    try {
-        fs.writeFileSync(batPath, batContent);
-        exec(`start "Creando React" "${batPath}"`, { cwd: root }, (err) => {
-            if (err) return res.status(500).json({ error: err.message });
-            res.json({ success: true });
-        });
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
-});
 
 app.get('/api/serve-img', (req, res) => {
     if (!req.query.path) return res.status(400).send('No path');
@@ -797,7 +889,7 @@ const toolsConfig = [
         type: "function",
         function: {
             name: "read_file",
-            description: "Lee un archivo. Ej: filepath='TFTE Next Steps MainApp 2.html'",
+            description: "Lee un archivo. Ej: filepath='Project_Control.html'",
             parameters: {
                 type: "object",
                 properties: {
@@ -1048,46 +1140,6 @@ app.get('/api/agente/tareas', (req, res) => {
 app.get('/api/tasks/pending', (req, res) => {
     try {
         const pending = [];
-        const planPath = 'C:\\TFTE\\VoiceAssistant\\VoiceAssistant_Plan.html';
-
-        if (fs.existsSync(planPath)) {
-            try {
-                const content = fs.readFileSync(planPath, 'utf-8');
-                const match = content.match(/let\s+data\s*=\s*([\s\S]*?)\/\*\s*__DATA_INJECTION_POINT__\s*\*\//);
-                if (match) {
-                    let jsonStr = match[1].trim();
-                    if (jsonStr.endsWith(';')) jsonStr = jsonStr.slice(0, -1);
-                    const data = JSON.parse(jsonStr);
-                    data.forEach(sub => {
-                        const subAppName = sub.subApp || 'General';
-                        if (sub.fields) {
-                            Object.keys(sub.fields).forEach(fieldKey => {
-                                const field = sub.fields[fieldKey];
-                                if (field && field.items) {
-                                    field.items.forEach(item => {
-                                        const st = (item.status || '').toLowerCase();
-                                        if (st.includes('pendiente') || st.includes('proceso') || st.includes('proximo')) {
-                                            if (item.text && item.text.trim() && item.text.trim() !== 'OK' && item.text.trim() !== '-') {
-                                                pending.push({
-                                                    subApp: subAppName,
-                                                    field: fieldKey,
-                                                    status: item.status,
-                                                    text: item.text
-                                                });
-                                            }
-                                        }
-                                    });
-                                }
-                            });
-                        }
-                    });
-                }
-            } catch (err) {
-                console.error("Error parseando VoiceAssistant_Plan.html", err);
-            }
-        }
-
-        // Novedad: Extraer tareas del nuevo Control Board
         const controlPath = path.join(BASE_DIR, CONTROL_FILENAME);
         if (fs.existsSync(controlPath)) {
             const controlContent = fs.readFileSync(controlPath, 'utf-8');
@@ -1095,83 +1147,61 @@ app.get('/api/tasks/pending', (req, res) => {
             if (controlMatch) {
                 try {
                     let jsonString = controlMatch[1].trim();
-                    if (jsonString.endsWith(';')) {
-                        jsonString = jsonString.slice(0, -1);
-                    }
+                    if (jsonString.endsWith(';')) jsonString = jsonString.slice(0, -1);
                     const cData = JSON.parse(jsonString);
                     function extractTasks(nodes, pathStr) {
                         nodes.forEach(node => {
                             const currentPath = pathStr ? `${pathStr} > ${node.title}` : node.title;
                             if (node.instruction && node.instruction.trim() !== '') {
-                                pending.push({
-                                    subApp: 'Control Board',
-                                    field: currentPath,
-                                    status: 'Pendiente',
-                                    text: node.instruction
-                                });
+                                pending.push({ subApp: 'Control Board', field: currentPath, status: 'Pendiente', text: node.instruction });
                             }
-                            if (node.children && node.children.length > 0) {
-                                extractTasks(node.children, currentPath);
-                            }
+                            if (node.children && node.children.length > 0) extractTasks(node.children, currentPath);
                         });
                     }
                     extractTasks(cData, '');
-                } catch (e) {
-                    console.error("Error parseando Project_Control:", e);
-                }
+                } catch (e) { console.error("Error parseando Project_Control:", e); }
             }
         }
         res.json(pending);
     } catch (e) {
-        console.error("Error loading pending tasks:", e);
         res.status(500).json({ error: e.message });
     }
 });
 
 app.post('/api/tasks/complete', express.json(), (req, res) => {
     try {
-        const { text, subApp } = req.body;
-        const PROJECT_ROOT = process.env.PROJECT_ROOT || 'C:\\TFTE';
-        const filePath = path.join(PROJECT_ROOT, 'TFTE Next Steps MainApp 2.html');
-        if (!fs.existsSync(filePath)) return res.status(404).json({ error: "File not found" });
+        const { text } = req.body;
+        // Ahora apunta al Control Board universal que genera la app
+        const filePath = path.join(BASE_DIR, CONTROL_FILENAME);
+        if (!fs.existsSync(filePath)) return res.status(404).json({ error: "Control Board no encontrado" });
 
         let content = fs.readFileSync(filePath, 'utf-8');
-        const match = content.match(/let\s+data\s*=\s*(\[[\s\S]*?\])\s*;/);
-        if (!match) return res.status(500).json({ error: "No data block found" });
+        const match = content.match(/let\s+controlData\s*=\s*([\s\S]*?)\/\*\s*__DATA_INJECTION_POINT__\s*\*\//);
+        if (!match) return res.status(500).json({ error: "No se encontraron datos en el Control" });
 
         const data = JSON.parse(match[1]);
         let found = false;
 
-        // Normalización difusa para evitar fallos por espacios o comillas
         const normalize = (s) => (s || '').replace(/\s+/g, ' ').trim().toLowerCase();
         const textNorm = normalize(text);
 
-        data.forEach(sub => {
-            if (!subApp || sub.subApp === subApp) {
-                if (sub.fields) {
-                    Object.keys(sub.fields).forEach(fKey => {
-                        const field = sub.fields[fKey];
-                        if (field && field.items) {
-                            field.items.forEach(item => {
-                                if (item.text) {
-                                    const itemNorm = normalize(item.text);
-                                    if (itemNorm.includes(textNorm) || textNorm.includes(itemNorm)) {
-                                        item.status = "Terminado";
-                                        found = true;
-                                    }
-                                }
-                            });
-                        }
-                    });
+        // Buscar la tarea en el árbol del Control Board y marcarla
+        function searchAndComplete(nodes) {
+            nodes.forEach(node => {
+                if (node.instruction && (normalize(node.instruction).includes(textNorm) || textNorm.includes(normalize(node.instruction)))) {
+                    node.instruction = node.instruction + " [COMPLETADO]"; // Marca visual
+                    found = true;
                 }
-            }
-        });
+                if (node.children && node.children.length > 0) searchAndComplete(node.children);
+            });
+        }
+        searchAndComplete(data);
 
         if (found) {
             const newDataStr = JSON.stringify(data, null, 2);
-            content = content.replace(match[1], newDataStr);
+            content = content.replace(match[1], newDataStr + '\n');
             fs.writeFileSync(filePath, content, 'utf-8');
-            return res.json({ ok: true, message: "Marcado como Terminado" });
+            return res.json({ ok: true, message: "Marcado como Terminado en el Control Board" });
         }
         res.json({ ok: false, error: "No se encontró la tarea exacta" });
     } catch (e) {
@@ -1184,7 +1214,7 @@ app.post('/api/tasks/complete', express.json(), (req, res) => {
 app.post('/api/git-sync', express.json(), (req, res) => {
     try {
         const timestamp = new Date().toLocaleString('es-ES');
-        const commitMessage = `Auto-sync via TFTE Voice Assistant: ${timestamp}`;
+        const commitMessage = `Auto-sync via AnywhereDesign: ${timestamp}`;
 
         // Secuencia: Add todo -> Commit -> Push
         const command = `git add . && git commit -m "${commitMessage}" && git push`;
@@ -1208,27 +1238,8 @@ app.post('/api/git-sync', express.json(), (req, res) => {
 });
 
 app.post('/api/save-next-steps', express.json(), (req, res) => {
-    try {
-        const PROJECT_ROOT = process.env.PROJECT_ROOT || 'C:\\TFTE';
-        const filePath = path.join(PROJECT_ROOT, 'TFTE Next Steps MainApp 2.html');
-        if (!fs.existsSync(filePath)) {
-            return res.status(404).json({ error: "File not found" });
-        }
-        let content = fs.readFileSync(filePath, 'utf-8');
-        const regex = /let data = \[[\s\S]*?\];\s*const mainContainer/m;
-        const newStr = `let data = ${JSON.stringify(req.body, null, 2)};\n\n    const mainContainer`;
-
-        if (regex.test(content)) {
-            content = content.replace(regex, newStr);
-            fs.writeFileSync(filePath, content, 'utf-8');
-            res.json({ ok: true });
-        } else {
-            res.status(500).json({ error: "No se encontró el bloque de datos en el archivo HTML" });
-        }
-    } catch (e) {
-        console.error(e);
-        res.status(500).json({ error: e.message });
-    }
+    // Endpoint obsoleto neutralizado: El guardado real ahora ocurre en /api/control/save
+    res.json({ ok: true, message: "Migrado a Control Board." });
 });
 
 app.post('/api/agente/tareas', express.json(), (req, res) => {
@@ -1278,6 +1289,16 @@ app.use((req, res, next) => {
         return next();
     }
     return catchAllProxy(req, res, next);
+});
+
+// Endpoint para instalar las CLI de IA si fallan en la PC nueva
+app.post('/api/install-cli', (req, res) => {
+    // Abre una consola verde para que el usuario vea la instalación
+    const cmd = `start cmd /k "color 0A && title Instalando Motores de IA && echo Instalando Antigravity y Claude (esto puede tardar unos minutos)... && npm install -g @google/antigravity @anthropic-ai/claude-code --force && echo. && echo Instalacion finalizada con exito. Ya puedes cerrar esta ventana y loguearte."`;
+    exec(cmd, (err) => {
+        if (err) console.error("Error abriendo CMD de instalación:", err);
+    });
+    res.json({ ok: true });
 });
 
 // ==========================================
@@ -1354,11 +1375,11 @@ try {
                     });
 
                     await transporter.sendMail({
-                        from: '"TFTE Assistant" <' + (process.env.SMTP_USER || 'no-reply@tfte.local') + '>',
+                        from: '"AnywhereDesign" <' + (process.env.SMTP_USER || 'no-reply@anywheredesign.local') + '>',
                         to: targetEmail,
-                        subject: "Túnel Restaurado: Nueva URL de TFTE Assistant",
+                        subject: "Túnel Restaurado: Nueva URL de AnywhereDesign",
                         text: `El sistema ha sido reiniciado.\n\nNueva URL de acceso: ${newUrl}\n\nPor favor, actualiza tu navegador.`,
-                        html: `<h2>TFTE Assistant en Línea</h2>
+                        html: `<h2>AnywhereDesign en Línea</h2>
                                <p>El sistema de resiliencia ha restaurado la conexión.</p>
                                <p>Tu nueva URL de acceso es: <br/><b><a href="${newUrl}">${newUrl}</a></b></p>`
                     });

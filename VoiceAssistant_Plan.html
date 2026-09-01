@@ -506,9 +506,9 @@
         "id": "fase_3_4",
         "subApp": "3.4. Base de Datos Central (Licencias)",
         "fields": {
-          "objetivo": { "items": [{ "text": "Almacenar y validar remotamente los HWID (MAC Addresses) de los clientes.", "status": "Pendiente" }] },
-          "prompt": { "items": [{ "text": "Desarrolla el script backend para el 'Servidor Madre' (ej. en Vercel, Firebase o Supabase) que recibirá el POST desde el server.js del cliente con su HWID generado en tiempo de ejecución. El servidor madre guardará el HWID en una base de datos junto con la fecha de expiración, y devolverá true/false según si la licencia sigue activa.", "status": "Pendiente" }] },
-          "detalles": { "items": [{ "text": "Este proceso ocurre en el servidor Node.js del cliente (server.js) EN TIEMPO DE EJECUCIÓN (cuando arranca el Asistente), NO durante la instalación (Inno Setup). Así evitamos fraudes por clonación de discos.", "status": "Pendiente" }] }
+          "objetivo": { "items": [{ "text": "Almacenar y validar remotamente los HWID (MAC Addresses) de los clientes.", "status": "Terminado" }] },
+          "prompt": { "items": [{ "text": "Desarrolla el script backend para el 'Servidor Madre' (ej. en Vercel, Firebase o Supabase) que recibirá el POST desde el server.js del cliente con su HWID generado en tiempo de ejecución. El servidor madre guardará el HWID en una base de datos junto con la fecha de expiración, y devolverá true/false según si la licencia sigue activa.", "status": "Terminado" }] },
+          "detalles": { "items": [{ "text": "Este proceso ocurre en el servidor Node.js del cliente (server.js) EN TIEMPO DE EJECUCIÓN (cuando arranca el Asistente), NO durante la instalación (Inno Setup). Así evitamos fraudes por clonación de discos. IMPLEMENTADO CON: Supabase (3 RPCs: register_trial, check_license, activate_license) + Modal de bloqueo HTML.", "status": "Terminado" }] }
         }
       },
       {

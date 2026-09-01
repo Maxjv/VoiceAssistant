@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TFTE Voice Assistant</title>
+    <title>AnywhereDesign</title>
     <link rel="stylesheet" href="style.css?v=13">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
@@ -46,33 +46,30 @@
             </div>
         </div>
         <aside class="side-rail">
-            <div class="rail-brand" title="TFTE Assistant — Conectado a tu proyecto local">
-                <span class="material-icons-round">graphic_eq</span>
-                <span class="rail-label">TFTE</span>
+            <div class="rail-brand" title="AnywhereDesign — Conectado a tu proyecto local"
+                style="display: flex; align-items: center; height: 100%; margin-left: -10px; padding-right: 0;">
+                <img src="logo.png" alt="AnywhereDesign Logo"
+                    style="max-height: 48px; width: auto; object-fit: contain;">
             </div>
 
-            <div class="rail-divider"></div>
+            <div class="rail-divider" style="margin-left: -5px; margin-right: 5px;"></div>
 
             <nav class="rail-tabs">
                 <button id="btnReact" class="rail-btn active" title="Ver App (npm start)">
                     <span class="material-icons-round">apps</span>
-                    <span class="rail-label">TFTE</span>
+                    <span class="rail-label">AnywhereDesign</span>
                 </button>
                 <button id="btnPlan" class="rail-btn" title="Ver Plan de Implementación">
                     <span class="material-icons-round">description</span>
                     <span class="rail-label">Plan</span>
                 </button>
-                <button id="btnHtml" class="rail-btn" title="Control — TFTE Next Steps MainApp 2">
+                <button id="btnHtml" class="rail-btn" title="Control Board — AnywhereDesign">
                     <span class="material-icons-round">build</span>
                     <span class="rail-label">Control</span>
                 </button>
                 <button class="rail-btn" id="btnImgs" title="Imgs">
                     <span class="material-icons-round">photo_library</span>
                     <span class="rail-label">Imgs</span>
-                </button>
-                <button class="rail-btn" id="btnInitReact" title="Crear React" style="color: #f59e0b;">
-                    <span class="material-icons-round">bolt</span>
-                    <span class="rail-label">Crear React</span>
                 </button>
                 <div id="actionStatusLabel"
                     style="font-size: 0.75rem; color: #a855f7; padding: 6px 12px; margin-left: 10px; background: rgba(168, 85, 247, 0.1); border-radius: 6px; border: 1px solid rgba(168,85,247,0.3); white-space: nowrap; font-weight: bold; display: none;">
@@ -164,10 +161,10 @@
 
         <div id="textPanel" class="text-panel hidden">
             <input id="folderInput" type="text"
-                placeholder="Carpeta (opcional, ej: src/interface/apps/2mog) — solo aplica en Modo Agente"
+                placeholder="Carpeta (opcional, ej: src/interface/apps) — solo aplica en Modo Agente"
                 autocomplete="off">
             <div class="text-panel-row">
-                <textarea id="textInput" rows="1" placeholder="Escrib├â¡ tu mensaje..." autocomplete="off"></textarea>
+                <textarea id="textInput" rows="1" placeholder="Escribí tu mensaje..." autocomplete="off"></textarea>
                 <button id="sendTextBtn" title="Enviar">
                     <span class="material-icons-round">send</span>
                 </button>
@@ -202,7 +199,7 @@
                     style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.25); color: #f87171; border-radius: 6px; padding: 6px 10px; font-size: 0.75rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; cursor: pointer;">
                     <span class="material-icons-round" style="font-size: 1rem;">delete_sweep</span> Limpiar Historial
                 </button>
-                <span style="font-size: 0.7rem; color: #64748b;">TFTE Assistant</span>
+                <span style="font-size: 0.7rem; color: #64748b;">AnywhereDesign</span>
             </div>
         </div>
 
@@ -281,8 +278,7 @@
                 <div class="startup-input-group">
                     <label>Añadir Nuevo Contexto</label>
                     <div style="display: flex; gap: 8px; margin-bottom: 18px;">
-                        <input type="text" id="newContextFolder" placeholder="Ej: C:\TFTE\VoiceAssistant"
-                            style="flex: 1;">
+                        <input type="text" id="newContextFolder" placeholder="Ej: C:\MisProyectos\App" style="flex: 1;">
                         <button id="addContextBtn"
                             style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); padding: 0 14px; border-radius: 8px; cursor: pointer; font-size: 0.8rem; font-weight: 600; white-space: nowrap; display: flex; align-items: center; gap: 4px; transition: all 0.2s;">
                             <span class="material-icons-round" style="font-size: 0.95rem;">add</span> Añadir
@@ -302,7 +298,8 @@
             <!-- Paso 1: Preguntar -->
             <div class="modal-contenido" id="modal-step-1">
                 <h2 id="modal-titulo">⚠️🤖 Falla de Conexión con IA</h2>
-                <p>El agente <strong id="modal-agent-name" style="color: #38bdf8;"></strong> no responde a la validación de contexto. ¿Ya has iniciado sesión en la terminal de tu PC?</p>
+                <p>El agente <strong id="modal-agent-name" style="color: #38bdf8;"></strong> no responde a la validación
+                    de contexto. ¿Ya has iniciado sesión en la terminal de tu PC?</p>
                 <div class="modal-botones">
                     <button id="btn-auth-yes" class="btn-primario" style="background: #eab308; color:#000;">Sí, ya estoy
                         logueado</button>
@@ -328,23 +325,39 @@
             <!-- Paso 3: Límite de Cuota Alcanzado -->
             <div class="modal-contenido" id="modal-step-quota" style="display:none;">
                 <h2 style="color: #ef4444;">⏳ Límite de Cuota Alcanzado</h2>
-                <p>La IA informa que has alcanzado tu límite de cuota (Individual quota reached). Por favor, mejora tu suscripción o espera <strong>45 minutos</strong> para que se restablezca automáticamente.</p>
+                <p>La IA informa que has agotado tus créditos o alcanzado el límite de uso de tu plan. Por favor,
+                    <strong>revisa la consola de tu proveedor (Antigravity o Claude)</strong> para verificar cuándo se
+                    restablece tu cuota o para adquirir más créditos.
+                </p>
                 <div class="modal-botones">
-                    <button id="btn-cerrar-modal-quota" class="btn-primario" style="background: #ef4444; color: #fff;">Entendido</button>
+                    <button id="btn-cerrar-modal-quota" class="btn-primario"
+                        style="background: #ef4444;">Entendido</button>
                 </div>
             </div>
 
-            <!-- Paso 4 (Si responde NO): Instrucciones de login -->
+            <!-- Paso 4 (Si responde NO): Instrucciones de login sin CMD -->
             <div class="modal-contenido" id="modal-step-no" style="display:none;">
                 <h2>🔑 Requiere Inicio de Sesión</h2>
-                <p>Ve a tu PC (Servidor), abre una ventana de consola (CMD o PowerShell) y escribe el siguiente comando:
-                </p>
-                <code id="cmd-instruccion"
-                    style="display:block; background:#0f172a; padding:10px; border-radius:6px; color:#38bdf8; font-size:1.2rem; font-weight:bold; margin-bottom:15px; letter-spacing: 1px;">claude login</code>
-                <p style="font-size:0.85rem; color:#94a3b8; margin-bottom:15px;">Una vez completado el inicio de sesión
-                    en la web que se abrirá, vuelve aquí e intenta de nuevo.</p>
+                <p>Para conectar tu agente, necesitas autorizar el acceso en tu navegador.</p>
+                <button id="btn-magico-login" class="btn-primario"
+                    style="width: 100%; margin: 15px 0; font-size: 1.1rem; display:flex; justify-content:center; align-items:center; gap: 8px;">
+                    <span class="material-icons-round">open_in_new</span> Iniciar Sesión Automáticamente
+                </button>
+
+                <!-- CAJA DE AYUDA SI FALLA EL COMANDO -->
+                <div
+                    style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); padding: 10px; border-radius: 8px; margin-bottom: 15px; text-align: left;">
+                    <p style="font-size: 0.8rem; color: #fca5a5; margin: 0 0 8px 0;"><strong>¿La consola dice "no se
+                            reconoce el comando"?</strong> Significa que Windows no instaló bien las dependencias.</p>
+                    <button id="btn-install-cli"
+                        style="background: #ef4444; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; cursor: pointer; width: 100%; font-weight:bold;">⚙️
+                        Instalar Motor de IA en esta PC</button>
+                </div>
+
+                <p id="msg-login-enviado" style="display:none; color: #34d399; font-weight: bold; font-size: 0.9rem;">
+                    ¡Revisa tu navegador! Se ha abierto la página de autenticación.</p>
                 <div class="modal-botones">
-                    <button id="btn-cerrar-modal-3" class="btn-primario">Entendido, cerrar</button>
+                    <button id="btn-cerrar-modal-3" class="btn-secundario">Cerrar esto</button>
                 </div>
             </div>
         </div>
@@ -354,22 +367,27 @@
     <div id="licenseModal" class="startup-modal hidden" style="display: none; z-index: 9999999;">
         <div class="startup-card" style="max-width: 440px; text-align: center;">
             <div style="margin-bottom: 20px;">
-                <span class="material-icons-round" style="font-size: 3.5rem; color: #ef4444; display: block; margin-bottom: 12px;">lock</span>
-                <h2 style="font-size: 1.3rem; margin: 0 0 8px 0; color: #f8fafc; font-weight: 700;">Período de Prueba Finalizado</h2>
+                <span class="material-icons-round"
+                    style="font-size: 3.5rem; color: #ef4444; display: block; margin-bottom: 12px;">lock</span>
+                <h2 style="font-size: 1.3rem; margin: 0 0 8px 0; color: #f8fafc; font-weight: 700;">Período de Prueba
+                    Finalizado</h2>
                 <p style="color: #94a3b8; font-size: 0.88rem; line-height: 1.5; margin: 0;">
                     Tu período de prueba gratuito de <strong style="color: #f87171;">7 días</strong> ha expirado.
-                    Para seguir utilizando TFTE Voice Assistant, adquiere una licencia PRO.
+                    Para seguir utilizando AnywhereDesign, adquiere una licencia PRO.
                 </p>
             </div>
-            <a href="https://tfte.com/voice-assistant" target="_blank" style="display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 12px 16px; background: linear-gradient(135deg, #0284c7, #2563eb); color: white; border: none; border-radius: 10px; font-size: 0.92rem; font-weight: 600; cursor: pointer; text-decoration: none; box-shadow: 0 4px 15px rgba(2, 132, 199, 0.3); transition: all 0.2s; margin-bottom: 16px; box-sizing: border-box;">
+            <a href="https://tfte.com/voice-assistant" target="_blank"
+                style="display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 12px 16px; background: linear-gradient(135deg, #0284c7, #2563eb); color: white; border: none; border-radius: 10px; font-size: 0.92rem; font-weight: 600; cursor: pointer; text-decoration: none; box-shadow: 0 4px 15px rgba(2, 132, 199, 0.3); transition: all 0.2s; margin-bottom: 16px; box-sizing: border-box;">
                 <span class="material-icons-round" style="font-size: 1.1rem;">shopping_cart</span>
                 Obtener Licencia PRO
             </a>
             <div style="width: 100%; height: 1px; background: rgba(255,255,255,0.08); margin: 16px 0;"></div>
             <p style="color: #64748b; font-size: 0.78rem; margin: 0 0 10px 0;">¿Ya tienes una clave? Ingrésala aquí:</p>
             <div style="display: flex; gap: 8px;">
-                <input type="text" id="licenseKeyInput" placeholder="TFTE-PRO-XXXXXXXX" style="flex: 1; background: rgba(2, 6, 23, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); padding: 10px 14px; border-radius: 10px; color: #f1f5f9; font-size: 0.88rem; outline: none; font-family: monospace; letter-spacing: 0.05em;">
-                <button id="verifyLicenseBtn" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); padding: 10px 16px; border-radius: 10px; cursor: pointer; font-size: 0.82rem; font-weight: 600; white-space: nowrap; transition: all 0.2s;">
+                <input type="text" id="licenseKeyInput" placeholder="ANYWHERE-PRO-XXXXXXXX"
+                    style="flex: 1; background: rgba(2, 6, 23, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); padding: 10px 14px; border-radius: 10px; color: #f1f5f9; font-size: 0.88rem; outline: none; font-family: monospace; letter-spacing: 0.05em;">
+                <button id="verifyLicenseBtn"
+                    style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); padding: 10px 16px; border-radius: 10px; cursor: pointer; font-size: 0.82rem; font-weight: 600; white-space: nowrap; transition: all 0.2s;">
                     Validar Licencia
                 </button>
             </div>
@@ -984,8 +1002,8 @@
             }
 
             if (contexts.length === 0) {
-                contexts = ['C:\\TFTE'];
-                activeContext = 'C:\\TFTE';
+                contexts = [];
+                activeContext = '';
             }
 
             function renderSelect() {
@@ -1074,11 +1092,12 @@
                 <span class="material-icons-round" style="font-size: 3rem; color: #f59e0b;">lock_clock</span>
                 <h2 style="font-size: 1.5rem; margin: 10px 0; color: white;">Trial Expirado</h2>
                 <p style="color: #94a3b8; font-size: 0.95rem; line-height: 1.5;">
-                    Tu prueba gratuita de 14 d├â¡as ha finalizado. Para seguir utilizando las funciones de Agente de IA y
+                    Tu prueba gratuita de 14 d├â¡as ha finalizado. Para seguir utilizando las funciones de Agente de IA
+                    y
                     Asistente de Voz, necesitas activar una licencia PRO.
                 </p>
                 <p style="color: #94a3b8; font-size: 0.95rem; margin-top: 10px;">
-                    <em>(La vista local de TFTE y Galer├â¡a siguen activas).</em>
+                    <em>(La vista local de AnywhereDesign y Galería siguen activas).</em>
                 </p>
             </div>
 
@@ -1096,19 +1115,8 @@
         </div>
     </div>
 
-    
-    <!-- MODAL CREAR REACT -->
-    <div id="initReactModal" class="hidden" style="display:none; background: rgba(0,0,0,0.8); z-index: 50; align-items:center; justify-content:center; position:fixed; inset:0;">
-        <div style="background: #1e293b; padding: 24px; border-radius: 12px; max-width: 400px; width: 90%; text-align: center; border: 1px solid rgba(255,255,255,0.1);">
-            <span class="material-icons-round" style="font-size: 3rem; color: #f59e0b; margin-bottom: 12px; display:block;">bolt</span>
-            <h3 style="margin-bottom: 8px; color: white;">Crear Proyecto React</h3>
-            <p style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 20px;">Esto generará los archivos base de React usando Vite en la carpeta front_react y hará npm install. ¿Deseas continuar?</p>
-            <div style="display: flex; gap: 12px; justify-content: center;">
-                <button id="cancelInitReactBtn" class="rail-btn" style="background: rgba(255,255,255,0.1); color: white; padding: 8px 20px; border-radius: 8px; border: none; cursor: pointer;">Cancelar</button>
-                <button id="confirmInitReactBtn" class="rail-btn" style="background: #3b82f6; color: white; font-weight: bold; padding: 8px 20px; border-radius: 8px; border: none; cursor: pointer;">Continuar</button>
-            </div>
-        </div>
-    </div>
+
+
     <script src="app.js?v=20260830_v5"></script>
 
     <script>
@@ -1147,32 +1155,48 @@
             }
         }, 1000);
     </script>
+
+    <!-- MODAL DE CARGA GLOBAL -->
+    <div id="loadingOverlay" class="hidden"
+        style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:999999; flex-direction:column; align-items:center; justify-content:center;">
+        <span class="material-icons-round"
+            style="font-size: 4rem; color: #38bdf8; animation: spin 1.5s linear infinite;">sync</span>
+        <h2 id="loadingOverlayTitle" style="color: white; margin-top: 20px; font-size: 1.3rem;">Construyendo Entorno...
+        </h2>
+        <p id="loadingOverlayDesc" style="color: #94a3b8; font-size: 0.9rem;">Esto tomará unos instantes. No cierres la
+            ventana.</p>
+    </div>
+
     <!-- CREATE CONTROL MODAL -->
     <div id="createControlModal" class="startup-modal hidden" style="display: none; z-index: 999999;">
         <div class="startup-modal-backdrop"></div>
         <div class="startup-modal-content" style="width: 450px; max-width: 90vw;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                 <h2 style="margin: 0; font-size: 1.25rem; display: flex; align-items: center; gap: 8px;">
-                    <span class="material-icons-round" style="color: #38bdf8;">dashboard_customize</span> Crear Entorno de Control
+                    <span class="material-icons-round" style="color: #38bdf8;">dashboard_customize</span> Crear Entorno
+                    de Control
                 </h2>
                 <button id="closeCreateControlModal" class="icon-btn" title="Cancelar">
                     <span class="material-icons-round">close</span>
                 </button>
             </div>
-            
-            <div style="padding: 15px; background: rgba(15, 23, 42, 0.4); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 8px; margin-bottom: 20px;">
+
+            <div
+                style="padding: 15px; background: rgba(15, 23, 42, 0.4); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 8px; margin-bottom: 20px;">
                 <p style="margin: 0 0 10px 0; color: #cbd5e1; font-size: 0.95rem; line-height: 1.5;">
                     No existe un entorno de control (<strong>Project_Control.html</strong>) en este proyecto.
                 </p>
                 <p style="margin: 0; color: #94a3b8; font-size: 0.9rem; line-height: 1.4;">
-                    Se generará un archivo base con un <strong>constructor visual</strong> integrado, donde podrás crear y organizar niveles (Screens, Cards, Modales, Botones, etc.).
+                    Se generará un archivo base con un <strong>constructor visual</strong> integrado, donde podrás crear
+                    y organizar niveles (Screens, Cards, Modales, Botones, etc.).
                 </p>
             </div>
 
             <div style="display: flex; gap: 10px; justify-content: flex-end;">
                 <button id="btnCancelCreateControl" class="btn-secundario">Cancelar</button>
                 <button id="btnConfirmCreateControl" class="btn-primario" style="background: #38bdf8; color: #020617;">
-                    <span class="material-icons-round" style="font-size: 1.1rem; margin-right: 5px;">add_circle</span> Crear
+                    <span class="material-icons-round" style="font-size: 1.1rem; margin-right: 5px;">add_circle</span>
+                    Crear
                 </button>
             </div>
         </div>
@@ -1180,76 +1204,3 @@
 </body>
 
 </html>
-^ < d i v 
- 
- i d = i n i t R e a c t M o d a l 
- 
- c l a s s = l i g h t b o x   h i d d e n 
- 
- s t y l e = b a c k g r o u n d :   r g b a ( 0 , 0 , 0 , 0 . 8 ) ;   z - i n d e x :   5 0 ;   a l i g n - i t e m s : c e n t e r ;   j u s t i f y - c o n t e n t : c e n t e r ;   p o s i t i o n : f i x e d ;   i n s e t : 0 ; ^ > ^ < d i v 
- 
- s t y l e = b a c k g r o u n d :   # 1 e 2 9 3 b ;   p a d d i n g :   2 4 p x ;   b o r d e r - r a d i u s :   1 2 p x ;   m a x - w i d t h :   4 0 0 p x ;   t e x t - a l i g n :   c e n t e r ;   b o r d e r :   1 p x   s o l i d   r g b a ( 2 5 5 , 2 5 5 , 2 5 5 , 0 . 1 ) ; ^ > ^ < s p a n 
- 
- c l a s s = m a t e r i a l - i c o n s - r o u n d 
- 
- s t y l e = f o n t - s i z e :   3 r e m ;   c o l o r :   # f 5 9 e 0 b ;   m a r g i n - b o t t o m :   1 2 p x ; ^ > b o l t ^ < / s p a n ^ > ^ < h 3 
- 
- s t y l e = m a r g i n - b o t t o m :   8 p x ; ^ > C r e a r 
- 
- P r o y e c t o 
- 
- R e a c t ^ < / h 3 ^ > ^ < p 
- 
- s t y l e = f o n t - s i z e :   0 . 9 r e m ;   c o l o r :   # 9 4 a 3 b 8 ;   m a r g i n - b o t t o m :   2 0 p x ; ^ > E s t o 
- 
- g e n e r a r 
- 
- l o s 
- 
- a r c h i v o s 
- 
- b a s e 
- 
- d e 
- 
- R e a c t 
- 
- u s a n d o 
- 
- V i t e 
- 
- e n 
- 
- l a 
- 
- c a r p e t a 
- 
- f r o n t _ r e a c t 
- 
- y 
- 
- h a r 
- 
- n p m 
- 
- i n s t a l l . 
- 
- D e s e a s 
- 
- c o n t i n u a r ? ^ < / p ^ > ^ < d i v 
- 
- s t y l e = d i s p l a y :   f l e x ;   g a p :   1 2 p x ;   j u s t i f y - c o n t e n t :   c e n t e r ; ^ > ^ < b u t t o n 
- 
- i d = c a n c e l I n i t R e a c t B t n 
- 
- c l a s s = r a i l - b t n 
- 
- s t y l e = b a c k g r o u n d :   r g b a ( 2 5 5 , 2 5 5 , 2 5 5 , 0 . 1 ) ;   c o l o r :   w h i t e ; ^ > C a n c e l a r ^ < / b u t t o n ^ > ^ < b u t t o n 
- 
- i d = c o n f i r m I n i t R e a c t B t n 
- 
- c l a s s = r a i l - b t n 
- 
- s t y l e = b a c k g r o u n d :   # 3 b 8 2 f 6 ;   c o l o r :   w h i t e ;   f o n t - w e i g h t :   b o l d ; ^ > C o n t i n u a r ^ < / b u t t o n ^ > ^ < / d i v ^ > ^ < / d i v ^ > ^ < / d i v ^ > 
- 
- 

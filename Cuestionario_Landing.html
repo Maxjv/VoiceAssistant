@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cuestionario Landing Page — TFTE Voice Assistant</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --card-bg: #131a2a;
+            --header-bg: #1e293b;
+            --header-border: rgba(255, 255, 255, 0.08);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-color: #3b82f6;
+            --accent-glow: rgba(59, 130, 246, 0.25);
+            --success: #10b981;
+            --warning: #f59e0b;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background: var(--bg-color);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background: var(--header-bg);
+            border-bottom: 1px solid var(--header-border);
+            padding: 14px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            backdrop-filter: blur(12px);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header-left .material-icons-round {
+            font-size: 1.6rem;
+            color: var(--accent-color);
+        }
+
+        header h1 {
+            font-size: 1rem;
+            font-weight: 800;
+            letter-spacing: 0.02em;
+        }
+
+        header h1 span {
+            color: var(--text-secondary);
+            font-weight: 500;
+            font-size: 0.82rem;
+            margin-left: 8px;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        #saveIndicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            transition: color 0.3s;
+        }
+
+        #saveIndicator .dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--text-secondary);
+            transition: all 0.3s;
+        }
+
+        #saveIndicator.saved {
+            color: var(--success);
+        }
+
+        #saveIndicator.saved .dot {
+            background: var(--success);
+            box-shadow: 0 0 8px var(--success);
+        }
+
+        .progress-bar-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .progress-bar {
+            width: 120px;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-color), #818cf8);
+            border-radius: 3px;
+            transition: width 0.5s ease;
+            width: 0%;
+        }
+
+        .progress-text {
+            font-size: 0.68rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+        }
+
+        main {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 24px 16px 100px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .intro-card {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(129, 140, 248, 0.05));
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            border-radius: 14px;
+            padding: 20px;
+        }
+
+        .intro-card h2 {
+            font-size: 1.1rem;
+            font-weight: 800;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .intro-card p {
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        .intro-card ul {
+            margin-top: 10px;
+            padding-left: 20px;
+        }
+
+        .intro-card li {
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+            line-height: 1.7;
+        }
+
+        .bloque {
+            background: var(--card-bg);
+            border: 1px solid var(--header-border);
+            border-radius: 14px;
+            overflow: hidden;
+            transition: border-color 0.3s;
+        }
+
+        .bloque:focus-within {
+            border-color: rgba(59, 130, 246, 0.3);
+        }
+
+        .bloque-header {
+            padding: 14px 18px;
+            background: rgba(59, 130, 246, 0.06);
+            border-bottom: 1px solid var(--header-border);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .bloque-number {
+            background: var(--accent-color);
+            color: white;
+            font-size: 0.7rem;
+            font-weight: 800;
+            width: 26px;
+            height: 26px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .bloque-title {
+            font-size: 0.9rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .bloque-body {
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .question-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .question-label {
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            line-height: 1.4;
+        }
+
+        .question-hint {
+            font-size: 0.72rem;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 80px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.85rem;
+            padding: 12px 14px;
+            resize: vertical;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            line-height: 1.5;
+        }
+
+        textarea:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        textarea::placeholder {
+            color: rgba(148, 163, 184, 0.5);
+        }
+
+        .checkbox-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .chip {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+            user-select: none;
+        }
+
+        .chip:hover {
+            border-color: rgba(59, 130, 246, 0.4);
+            background: rgba(59, 130, 246, 0.08);
+        }
+
+        .chip.selected {
+            background: rgba(59, 130, 246, 0.15);
+            border-color: var(--accent-color);
+            color: var(--text-primary);
+        }
+
+        .chip input {
+            display: none;
+        }
+
+        .separator {
+            height: 1px;
+            background: var(--header-border);
+            margin: 4px 0;
+        }
+
+        /* Export button */
+        .export-section {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(59, 130, 246, 0.1));
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            border-radius: 14px;
+            padding: 24px;
+            text-align: center;
+        }
+
+        .export-section h3 {
+            font-size: 1rem;
+            font-weight: 800;
+            margin-bottom: 8px;
+        }
+
+        .export-section p {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+        }
+
+        .btn-export {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #0284c7, #2563eb);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(2, 132, 199, 0.3);
+            transition: all 0.2s;
+        }
+
+        .btn-export:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(2, 132, 199, 0.45);
+        }
+
+        .btn-clear {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 10px 18px;
+            background: rgba(239, 68, 68, 0.1);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            border-radius: 10px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-left: 10px;
+        }
+
+        .btn-clear:hover {
+            background: rgba(239, 68, 68, 0.2);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .bloque {
+            animation: fadeIn 0.4s ease both;
+        }
+
+        .bloque:nth-child(2) { animation-delay: 0.05s; }
+        .bloque:nth-child(3) { animation-delay: 0.1s; }
+        .bloque:nth-child(4) { animation-delay: 0.15s; }
+        .bloque:nth-child(5) { animation-delay: 0.2s; }
+        .bloque:nth-child(6) { animation-delay: 0.25s; }
+        .bloque:nth-child(7) { animation-delay: 0.3s; }
+        .bloque:nth-child(8) { animation-delay: 0.35s; }
+        .bloque:nth-child(9) { animation-delay: 0.4s; }
+        .bloque:nth-child(10) { animation-delay: 0.45s; }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--header-bg);
+            border: 1px solid var(--success);
+            color: var(--success);
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            transition: transform 0.4s ease;
+            z-index: 100;
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <div class="header-left">
+            <span class="material-icons-round">edit_note</span>
+            <h1>Cuestionario Landing<span>TFTE Voice Assistant</span></h1>
+        </div>
+        <div class="header-actions">
+            <div class="progress-bar-container">
+                <div class="progress-bar">
+                    <div class="progress-bar-fill" id="progressFill"></div>
+                </div>
+                <span class="progress-text" id="progressText">0%</span>
+            </div>
+            <div id="saveIndicator">
+                <span class="dot"></span>
+                <span class="txt">Sin cambios</span>
+            </div>
+        </div>
+    </header>
+
+    <main id="mainContainer">
+        <!-- INTRO -->
+        <div class="intro-card">
+            <h2><span class="material-icons-round">lightbulb</span> Antes de Empezar</h2>
+            <p>Responde estas preguntas para que la IA construya tu landing page. No necesitas redactar copy perfecto; lo importante es aportar información real.</p>
+            <ul>
+                <li>Responde de forma sencilla y natural.</li>
+                <li>Si no sabes una respuesta, déjala en blanco o escribe "no lo sé".</li>
+                <li>Las frases que quieras conservar literalmente deben indicarse como <strong style="color: #f59e0b;">"NO CAMBIAR"</strong>.</li>
+                <li>Tus respuestas se guardan automáticamente en el navegador.</li>
+            </ul>
+        </div>
+
+        <!-- BLOQUE 01 -->
+        <div class="bloque">
+            <div class="bloque-header">
+                <div class="bloque-number">01</div>
+                <div class="bloque-title">Qué Haces</div>
+            </div>
+            <div class="bloque-body">
+                <div class="question-group">
+                    <label class="question-label">¿Qué es tu empresa, proyecto o producto?</label>
+                    <span class="question-hint">Cuéntalo en 1–2 frases.</span>
+                    <textarea data-field="q01_que_es" placeholder="Ej: Es un asistente de voz con IA que controla tu entorno de programación..."></textarea>
+                </div>
+                <div class="separator"></div>
+                <div class="question-group">
+                    <label class="question-label">¿Qué vendes o qué solución ofreces?</label>
+                    <textarea data-field="q01_que_vendes" placeholder="Ej: Un software de escritorio que permite..."></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- BLOQUE 02 -->
+        <div class="bloque">
+            <div class="bloque-header">
+                <div class="bloque-number">02</div>
+                <div class="bloque-title">Para Quién</div>
+            </div>
+            <div class="bloque-body">
+                <div class="question-group">
+                    <label class="question-label">¿A quién quieres atraer con esta web?</label>
+                    <span class="question-hint">Ej: empresas, profesionales, consumidores, emprendedores…</span>
+                    <textarea data-field="q02_publico" placeholder="Ej: Programadores independientes, equipos de desarrollo..."></textarea>
+                </div>
+                <div class="separator"></div>
+                <div class="question-group">
+                    <label class="question-label">¿Quién toma la decisión de compra?</label>
+                    <span class="question-hint">Ej: CEO, RRHH, director de marketing, particular…</span>
+                    <textarea data-field="q02_decision" placeholder="Ej: El propio desarrollador, CTO de startups..."></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- BLOQUE 03 -->
+        <div class="bloque">
+            <div class="bloque-header">
+                <div class="bloque-number">03</div>
+                <div class="bloque-title">Qué Está Pasando Hoy</div>
+            </div>
+            <div class="bloque-body">
+                <div class="question-group">
+                    <label class="question-label">¿Qué problema, frustración o necesidad tiene tu cliente antes de conocerte?</label>
+                    <span class="question-hint">No hace falta redactarlo bien. Escríbelo como te salga.</span>
+                    <textarea data-field="q03_problema" placeholder="Ej: Los desarrolladores pierden tiempo escribiendo comandos repetitivos..." style="min-height: 100px;"></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- BLOQUE 04 -->
+        <div class="bloque">
+            <div class="bloque-header">
+                <div class="bloque-number">04</div>
+                <div class="bloque-title">Cómo lo Solucionas</div>
+            </div>
+            <div class="bloque-body">
+                <div class="question-group">
+                    <label class="question-label">¿Qué haces tú para solucionar ese problema?</label>
+                    <span class="question-hint">Explica de forma sencilla cómo ayudas a tu cliente.</span>
+                    <textarea data-field="q04_solucion" placeholder="Ej: Con un agente de IA que escucha tu voz y ejecuta acciones..." style="min-height: 100px;"></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- BLOQUE 05 -->
+        <div class="bloque">
+            <div class="bloque-header">
+                <div class="bloque-number">05</div>
+                <div class="bloque-title">Qué te Hace Diferente</div>
+            </div>
+            <div class="bloque-body">
+                <div class="question-group">
+                    <label class="question-label">¿Por qué alguien debería elegirte a ti y no a otra empresa?</label>
+                    <span class="question-hint">Puedes mencionar rapidez, sencillez, precio, tecnología, personalización, etc.</span>
+                    <textarea data-field="q05_diferencial" placeholder="Ej: Latencia cero porque corre 100% en local, no depende de la nube..." style="min-height: 100px;"></textarea>
+                </div>
+                <div class="separator"></div>
+                <div class="question-group">
+                    <label class="question-label">¿Hay algo que tus competidores hagan y tú NO quieras hacer?</label>
+                    <textarea data-field="q05_no_hacer" placeholder="Ej: No quiero cobrar suscripción mensual abusiva..."></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- BLOQUE 06 -->
+        <div class="bloque">
+            <div class="bloque-header">
+                <div class="bloque-number">06</div>
+                <div class="bloque-title">Qué Cambia para el Cliente</div>
+            </div>
+            <div class="bloque-body">
+                <div class="question-group">
+                    <label class="question-label">¿Qué consigue o qué mejora después de utilizar tu producto o servicio?</label>
+                    <span class="question-hint">Piensa en resultados, no solo en funcionalidades.</span>
+                    <textarea data-field="q06_resultados" placeholder="Ej: Programa más rápido, menos errores, flujo de trabajo sin interrupciones..."></textarea>
+                </div>
+                <div class="separator"></div>
+                <div class="question-group">
+                    <label class="question-label">¿Cuál es el beneficio más importante?</label>
+                    <textarea data-field="q06_beneficio_top" placeholder="Ej: Multiplicar la velocidad de desarrollo por 3x..."></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- BLOQUE 07 -->
+        <div class="bloque">
+            <div class="bloque-header">
+                <div class="bloque-number">07</div>
+                <div class="bloque-title">Personalidad de la Marca</div>
+            </div>
+            <div class="bloque-body">
+                <div class="question-group">
+                    <label class="question-label">¿Qué quieres que transmita tu marca? (Elige hasta 5)</label>
+                    <div class="checkbox-grid" data-chips="q07_personalidad">
+                        <label class="chip"><input type="checkbox" value="Innovadora">Innovadora</label>
+                        <label class="chip"><input type="checkbox" value="Tecnológica">Tecnológica</label>
+                        <label class="chip"><input type="checkbox" value="Premium">Premium</label>
+                        <label class="chip"><input type="checkbox" value="Humana">Humana</label>
+                        <label class="chip"><input type="checkbox" value="Disruptiva">Disruptiva</label>
+                        <label class="chip"><input type="checkbox" value="Inspiradora">Inspiradora</label>
+                        <label class="chip"><input type="checkbox" value="Elegante">Elegante</label>
+                        <label class="chip"><input type="checkbox" value="Minimalista">Minimalista</label>
+                        <label class="chip"><input type="checkbox" value="Cercana">Cercana</label>
+                        <label class="chip"><input type="checkbox" value="Profesional">Profesional</label>
+                        <label class="chip"><input type="checkbox" value="Divertida">Divertida</label>
+                        <label class="chip"><input type="checkbox" value="Consciente">Consciente</label>
+                    </div>
+                </div>
+                <div class="separator"></div>
+                <div class="question-group">
+                    <label class="question-label">Si alguien entra en tu web, ¿qué quieres que piense?</label>
+                    <span class="question-hint">Completa: "Esto es…"</span>
+                    <textarea data-field="q07_impresion" placeholder='Ej: "Esto es... exactamente lo que necesitaba para dejar de perder tiempo"'></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- BLOQUE 08 -->
+        <div class="bloque">
+            <div class="bloque-header">
+                <div class="bloque-number">08</div>
+                <div class="bloque-title">Frases y Mensajes</div>
+            </div>
+            <div class="bloque-body">
+                <div class="question-group">
+                    <label class="question-label">¿Tienes frases que quieras mantener sí o sí?</label>
+                    <span class="question-hint">Escríbelas literalmente. Si NO quieres que la IA las cambie, añade "NO CAMBIAR".</span>
+                    <textarea data-field="q08_frases" placeholder='Ej: "Tu código, a la velocidad de tu voz." — NO CAMBIAR' style="min-height: 100px;"></textarea>
+                </div>
+                <div class="separator"></div>
+                <div class="question-group">
+                    <label class="question-label">¿Hay alguna palabra, frase o enfoque que NO quieras utilizar?</label>
+                    <textarea data-field="q08_evitar" placeholder="Ej: No quiero que suene a ChatGPT genérico..."></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- BLOQUE 09 -->
+        <div class="bloque">
+            <div class="bloque-header">
+                <div class="bloque-number">09</div>
+                <div class="bloque-title">Qué Quieres que Haga el Visitante</div>
+            </div>
+            <div class="bloque-body">
+                <div class="question-group">
+                    <label class="question-label">¿Cuál es la acción principal que quieres conseguir?</label>
+                    <div class="checkbox-grid" data-chips="q09_cta">
+                        <label class="chip"><input type="checkbox" value="Solicitar demo">Solicitar demo</label>
+                        <label class="chip"><input type="checkbox" value="Comprar">Comprar</label>
+                        <label class="chip"><input type="checkbox" value="Reservar llamada">Reservar llamada</label>
+                        <label class="chip"><input type="checkbox" value="Registrarse">Registrarse</label>
+                        <label class="chip"><input type="checkbox" value="Contactar">Contactar</label>
+                        <label class="chip"><input type="checkbox" value="Solicitar presupuesto">Solicitar presupuesto</label>
+                        <label class="chip"><input type="checkbox" value="Unirse a lista de espera">Lista de espera</label>
+                        <label class="chip"><input type="checkbox" value="Descargar">Descargar</label>
+                    </div>
+                </div>
+                <div class="separator"></div>
+                <div class="question-group">
+                    <label class="question-label">¿Qué datos quieres pedir en el formulario?</label>
+                    <div class="checkbox-grid" data-chips="q09_datos">
+                        <label class="chip"><input type="checkbox" value="Nombre">Nombre</label>
+                        <label class="chip"><input type="checkbox" value="Email">Email</label>
+                        <label class="chip"><input type="checkbox" value="Empresa">Empresa</label>
+                        <label class="chip"><input type="checkbox" value="Teléfono">Teléfono</label>
+                    </div>
+                    <textarea data-field="q09_datos_extra" placeholder="Otros datos que quieras pedir..." style="min-height: 50px; margin-top: 8px;"></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- BLOQUE 10 -->
+        <div class="bloque">
+            <div class="bloque-header">
+                <div class="bloque-number">10</div>
+                <div class="bloque-title">Estética y Referencias</div>
+            </div>
+            <div class="bloque-body">
+                <div class="question-group">
+                    <label class="question-label">¿Cómo quieres que se sienta visualmente? (Elige hasta 5)</label>
+                    <div class="checkbox-grid" data-chips="q10_estetica">
+                        <label class="chip"><input type="checkbox" value="Tech">Tech</label>
+                        <label class="chip"><input type="checkbox" value="Minimalista">Minimalista</label>
+                        <label class="chip"><input type="checkbox" value="Premium">Premium</label>
+                        <label class="chip"><input type="checkbox" value="Orgánico">Orgánico</label>
+                        <label class="chip"><input type="checkbox" value="Editorial">Editorial</label>
+                        <label class="chip"><input type="checkbox" value="Futurista">Futurista</label>
+                        <label class="chip"><input type="checkbox" value="Elegante">Elegante</label>
+                        <label class="chip"><input type="checkbox" value="Experimental">Experimental</label>
+                        <label class="chip"><input type="checkbox" value="Humano">Humano</label>
+                        <label class="chip"><input type="checkbox" value="Corporativo">Corporativo</label>
+                    </div>
+                </div>
+                <div class="separator"></div>
+                <div class="question-group">
+                    <label class="question-label">¿Hay alguna web, marca, película, música, artista o estética que te inspire?</label>
+                    <span class="question-hint">Puedes poner referencias aunque no sepas explicar por qué.</span>
+                    <textarea data-field="q10_referencias" placeholder="Ej: Linear.app, Vercel, la estética de Blade Runner..."></textarea>
+                </div>
+                <div class="separator"></div>
+                <div class="question-group">
+                    <label class="question-label">¿Tienes colores de marca?</label>
+                    <span class="question-hint">Si tienes códigos HEX, inclúyelos. Si no, describe los colores.</span>
+                    <textarea data-field="q10_colores" placeholder="Ej: Azul oscuro (#0b0f19), azul eléctrico (#3b82f6), blanco..."></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- EXPORT -->
+        <div class="export-section">
+            <h3>🚀 ¿Listo para generar tu Landing?</h3>
+            <p>Copia todas tus respuestas al portapapeles para pegarlas junto con el prompt de la IA.</p>
+            <button class="btn-export" onclick="exportAnswers()">
+                <span class="material-icons-round">content_copy</span>
+                Copiar Respuestas al Portapapeles
+            </button>
+            <button class="btn-clear" onclick="clearAll()">
+                <span class="material-icons-round">delete_sweep</span>
+                Borrar Todo
+            </button>
+        </div>
+    </main>
+
+    <!-- Toast -->
+    <div class="toast" id="toast">
+        <span class="material-icons-round">check_circle</span>
+        <span id="toastText">Copiado al portapapeles</span>
+    </div>
+
+    <script>
+        const STORAGE_KEY = 'tfte_landing_questionnaire';
+        const saveIndicator = document.getElementById('saveIndicator');
+        const progressFill = document.getElementById('progressFill');
+        const progressText = document.getElementById('progressText');
+
+        // ── Load saved data ──
+        function loadSavedData() {
+            try {
+                const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+
+                // Textareas
+                document.querySelectorAll('textarea[data-field]').forEach(ta => {
+                    const key = ta.dataset.field;
+                    if (saved[key]) ta.value = saved[key];
+                });
+
+                // Chips (checkboxes)
+                document.querySelectorAll('.checkbox-grid[data-chips]').forEach(grid => {
+                    const key = grid.dataset.chips;
+                    const values = saved[key] || [];
+                    grid.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                        if (values.includes(cb.value)) {
+                            cb.checked = true;
+                            cb.closest('.chip').classList.add('selected');
+                        }
+                    });
+                });
+
+                updateProgress();
+            } catch (e) { }
+        }
+
+        // ── Save data ──
+        let saveTimeout;
+        function saveData() {
+            clearTimeout(saveTimeout);
+            saveIndicator.className = '';
+            saveIndicator.querySelector('.txt').textContent = 'Guardando...';
+
+            saveTimeout = setTimeout(() => {
+                const data = {};
+
+                document.querySelectorAll('textarea[data-field]').forEach(ta => {
+                    data[ta.dataset.field] = ta.value;
+                });
+
+                document.querySelectorAll('.checkbox-grid[data-chips]').forEach(grid => {
+                    const key = grid.dataset.chips;
+                    data[key] = Array.from(grid.querySelectorAll('input:checked')).map(cb => cb.value);
+                });
+
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+                saveIndicator.className = 'saved';
+                saveIndicator.querySelector('.txt').textContent = 'Guardado ✓';
+                updateProgress();
+            }, 600);
+        }
+
+        // ── Progress ──
+        function updateProgress() {
+            const textareas = document.querySelectorAll('textarea[data-field]');
+            const chipGrids = document.querySelectorAll('.checkbox-grid[data-chips]');
+            let total = textareas.length + chipGrids.length;
+            let filled = 0;
+
+            textareas.forEach(ta => {
+                if (ta.value.trim().length > 0) filled++;
+            });
+
+            chipGrids.forEach(grid => {
+                if (grid.querySelectorAll('input:checked').length > 0) filled++;
+            });
+
+            const pct = Math.round((filled / total) * 100);
+            progressFill.style.width = pct + '%';
+            progressText.textContent = pct + '%';
+        }
+
+        // ── Event listeners ──
+        document.querySelectorAll('textarea[data-field]').forEach(ta => {
+            ta.addEventListener('input', saveData);
+        });
+
+        document.querySelectorAll('.chip').forEach(chip => {
+            chip.addEventListener('click', () => {
+                const cb = chip.querySelector('input');
+                cb.checked = !cb.checked;
+                chip.classList.toggle('selected', cb.checked);
+                saveData();
+            });
+        });
+
+        // ── Export ──
+        function exportAnswers() {
+            const labels = {
+                q01_que_es: 'BLOQUE 01 — QUÉ ES:',
+                q01_que_vendes: 'QUÉ VENDO/SOLUCIÓN:',
+                q02_publico: 'BLOQUE 02 — PÚBLICO OBJETIVO:',
+                q02_decision: 'DECISOR DE COMPRA:',
+                q03_problema: 'BLOQUE 03 — PROBLEMA/FRUSTRACIÓN:',
+                q04_solucion: 'BLOQUE 04 — CÓMO LO SOLUCIONO:',
+                q05_diferencial: 'BLOQUE 05 — DIFERENCIAL:',
+                q05_no_hacer: 'LO QUE NO QUIERO HACER:',
+                q06_resultados: 'BLOQUE 06 — RESULTADOS PARA EL CLIENTE:',
+                q06_beneficio_top: 'BENEFICIO MÁS IMPORTANTE:',
+                q07_personalidad: 'BLOQUE 07 — PERSONALIDAD DE MARCA:',
+                q07_impresion: 'PRIMERA IMPRESIÓN ("Esto es..."):',
+                q08_frases: 'BLOQUE 08 — FRASES CLAVE:',
+                q08_evitar: 'EVITAR:',
+                q09_cta: 'BLOQUE 09 — CTA PRINCIPAL:',
+                q09_datos: 'DATOS DEL FORMULARIO:',
+                q09_datos_extra: 'DATOS EXTRA:',
+                q10_estetica: 'BLOQUE 10 — ESTÉTICA:',
+                q10_referencias: 'REFERENCIAS VISUALES:',
+                q10_colores: 'COLORES DE MARCA:'
+            };
+
+            let output = '═══════════════════════════════════════\n';
+            output += 'CUESTIONARIO LANDING PAGE — TFTE VOICE ASSISTANT\n';
+            output += '═══════════════════════════════════════\n\n';
+
+            const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+
+            for (const [key, label] of Object.entries(labels)) {
+                const val = saved[key];
+                if (Array.isArray(val) && val.length > 0) {
+                    output += label + '\n' + val.join(', ') + '\n\n';
+                } else if (typeof val === 'string' && val.trim()) {
+                    output += label + '\n' + val.trim() + '\n\n';
+                }
+            }
+
+            navigator.clipboard.writeText(output).then(() => {
+                showToast('Respuestas copiadas al portapapeles ✓');
+            }).catch(() => {
+                showToast('Error al copiar. Revisa permisos del navegador.');
+            });
+        }
+
+        function clearAll() {
+            if (confirm('¿Borrar TODAS las respuestas? Esta acción no se puede deshacer.')) {
+                localStorage.removeItem(STORAGE_KEY);
+                document.querySelectorAll('textarea[data-field]').forEach(ta => ta.value = '');
+                document.querySelectorAll('.chip').forEach(chip => {
+                    chip.classList.remove('selected');
+                    chip.querySelector('input').checked = false;
+                });
+                updateProgress();
+                saveIndicator.className = '';
+                saveIndicator.querySelector('.txt').textContent = 'Borrado';
+                showToast('Todas las respuestas han sido borradas');
+            }
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastText').textContent = msg;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        // ── Init ──
+        loadSavedData();
+    </script>
+</body>
+
+</html>

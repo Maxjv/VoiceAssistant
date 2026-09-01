@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -14,71 +15,166 @@
             --text-secondary: #94a3b8;
             --accent-color: #3b82f6;
         }
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
-        body { background: var(--bg-color); color: var(--text-primary); min-height: 100vh; }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background: var(--bg-color);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
         header {
-            position: sticky; top: 0; z-index: 5;
+            position: sticky;
+            top: 0;
+            z-index: 5;
             background: var(--header-bg);
-            border-bottom: 1px solid rgba(255,255,255,0.08);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
             padding: 10px 16px;
-            display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
         }
+
         #crumbs-container {
-            display: flex; align-items: center; gap: 8px; flex-wrap: wrap; flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            flex: 1;
         }
+
         .crumb {
-            background: none; border: none; color: var(--text-secondary);
-            font-size: 0.85rem; cursor: pointer; padding: 4px 6px; border-radius: 6px;
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            cursor: pointer;
+            padding: 4px 6px;
+            border-radius: 6px;
         }
-        .crumb:hover { background: rgba(255,255,255,0.08); color: white; }
-        .crumb.current { color: var(--accent-color); font-weight: 600; cursor: default; }
-        .crumb.current:hover { background: none; }
-        .sep { color: var(--text-secondary); opacity: 0.5; }
-        main { padding: 16px; }
+
+        .crumb:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: white;
+        }
+
+        .crumb.current {
+            color: var(--accent-color);
+            font-weight: 600;
+            cursor: default;
+        }
+
+        .crumb.current:hover {
+            background: none;
+        }
+
+        .sep {
+            color: var(--text-secondary);
+            opacity: 0.5;
+        }
+
+        main {
+            padding: 16px;
+        }
+
         .grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
             gap: 12px;
         }
+
         .tile {
-            background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(255,255,255,0.08);
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.08);
             border-radius: 10px;
             cursor: pointer;
             overflow: hidden;
             transition: all 0.15s;
-            display: flex; flex-direction: column;
+            display: flex;
+            flex-direction: column;
         }
-        .tile:hover { border-color: var(--accent-color); transform: translateY(-2px); }
+
+        .tile:hover {
+            border-color: var(--accent-color);
+            transform: translateY(-2px);
+        }
+
         .tile-folder {
-            align-items: center; justify-content: center;
-            padding: 20px 8px; gap: 6px; text-align: center;
+            align-items: center;
+            justify-content: center;
+            padding: 20px 8px;
+            gap: 6px;
+            text-align: center;
         }
-        .tile-folder .material-icons-round { font-size: 2rem; color: var(--accent-color); }
-        .tile-folder span.name { font-size: 0.78rem; color: var(--text-primary); word-break: break-word; }
+
+        .tile-folder .material-icons-round {
+            font-size: 2rem;
+            color: var(--accent-color);
+        }
+
+        .tile-folder span.name {
+            font-size: 0.78rem;
+            color: var(--text-primary);
+            word-break: break-word;
+        }
+
         .tile-img img {
-            width: 100%; height: 110px; object-fit: cover; display: block;
+            width: 100%;
+            height: 110px;
+            object-fit: cover;
+            display: block;
             background: #fff;
         }
+
         .tile-img span.name {
-            font-size: 0.7rem; color: var(--text-secondary);
-            padding: 6px 8px; word-break: break-word;
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            padding: 6px 8px;
+            word-break: break-word;
         }
-        .empty { color: var(--text-secondary); font-size: 0.9rem; padding: 30px; text-align: center; }
+
+        .empty {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            padding: 30px;
+            text-align: center;
+        }
 
         .lightbox {
-            position: fixed; inset: 0; background: rgba(0,0,0,0.9);
-            display: flex; align-items: center; justify-content: center;
-            z-index: 100; padding: 20px;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            padding: 20px;
         }
-        .lightbox.hidden { display: none; }
-        .lightbox img { max-width: 100%; max-height: 100%; border-radius: 6px; }
+
+        .lightbox.hidden {
+            display: none;
+        }
+
+        .lightbox img {
+            max-width: 100%;
+            max-height: 100%;
+            border-radius: 6px;
+        }
     </style>
 </head>
+
 <body>
     <header>
         <div id="crumbs-container"></div>
-        <button id="btnAddExtFolder" style="background: rgba(59, 130, 246, 0.15); border: 1px solid var(--accent-color); color: var(--accent-color); padding: 4px 10px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 0.8rem; font-weight: 600; transition: all 0.2s;">
+        <button id="btnAddExtFolder"
+            style="background: rgba(59, 130, 246, 0.15); border: 1px solid var(--accent-color); color: var(--accent-color); padding: 4px 10px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 0.8rem; font-weight: 600; transition: all 0.2s;">
             <span class="material-icons-round" style="font-size: 1.1rem;">create_new_folder</span>
             Añadir Carpeta
         </button>
@@ -87,8 +183,36 @@
         <div class="grid" id="grid"></div>
         <p class="empty" id="emptyMsg" style="display:none;">Carpeta vacía.</p>
     </main>
-    <div class="lightbox hidden" id="lightbox">
-        <img id="lightboxImg" src="" alt="">
+    <!-- NUEVO MODAL: EXPLORADOR WEB -->
+    <div class="lightbox hidden" id="folderPickerModal" style="z-index: 200;">
+        <div
+            style="background: var(--header-bg); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; width: 450px; max-width: 90vw; max-height: 80vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 15px 40px rgba(0,0,0,0.8);">
+            <div
+                style="padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.2);">
+                <h3
+                    style="margin: 0; font-size: 1rem; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
+                    <span class="material-icons-round" style="color: var(--accent-color);">folder_open</span> Buscar
+                    Carpeta
+                </h3>
+                <button id="closePickerBtn"
+                    style="background: none; border: none; color: var(--text-secondary); cursor: pointer;"><span
+                        class="material-icons-round">close</span></button>
+            </div>
+            <div style="padding: 12px 15px; background: rgba(255,255,255,0.02); border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.85rem; color: var(--accent-color); font-weight: 600; word-break: break-all;"
+                id="pickerCurrentPath">Cargando...</div>
+            <div id="pickerList"
+                style="flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 4px;">
+                <!-- Aquí se inyectan las carpetas mágicamente -->
+            </div>
+            <div
+                style="padding: 15px; border-top: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: flex-end; gap: 10px; background: rgba(0,0,0,0.2);">
+                <button id="cancelPickerBtn"
+                    style="background: rgba(255,255,255,0.1); border: none; color: white; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.85rem;">Cancelar</button>
+                <button id="confirmPickerBtn"
+                    style="background: var(--accent-color); border: none; color: white; font-weight: bold; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.85rem;">Seleccionar
+                    Aquí</button>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -101,21 +225,74 @@
 
         let externalFolders = JSON.parse(localStorage.getItem('tfte_ext_folders') || '[]');
 
-        btnAddExtFolder.onclick = () => {
-            fetch('/api/select-folder')
+        const folderPickerModal = document.getElementById('folderPickerModal');
+        const pickerCurrentPath = document.getElementById('pickerCurrentPath');
+        const pickerList = document.getElementById('pickerList');
+        let currentPickerPath = '';
+
+        function openWebPicker(dir = '') {
+            folderPickerModal.classList.remove('hidden');
+            pickerList.innerHTML = '<div style="color:#94a3b8; padding:20px; text-align:center;"><span class="material-icons-round" style="animation: spin 1s linear infinite;">sync</span> Buscando...</div>';
+
+            fetch('/api/explore-folders?dir=' + encodeURIComponent(dir))
                 .then(r => r.json())
                 .then(data => {
-                    if (data.path) {
-                        const name = data.path.split(/[\/\\]/).pop();
-                        if (!externalFolders.find(f => f.path === data.path)) {
-                            externalFolders.push({ name, path: data.path });
-                            localStorage.setItem('tfte_ext_folders', JSON.stringify(externalFolders));
-                        }
-                        load('', data.path); // Load it immediately
-                    } else if (data.error && data.error !== 'Cancelado') {
-                        alert(data.error);
+                    if (data.error) {
+                        pickerList.innerHTML = '<div style="color:#ef4444; padding:10px; text-align:center;">' + data.error + '</div>';
+                        return;
                     }
+                    currentPickerPath = data.current;
+                    pickerCurrentPath.textContent = data.current || 'Este Equipo (Discos Locales)';
+                    pickerList.innerHTML = '';
+
+                    // Botón de Volver Atrás (Subir un nivel)
+                    if (data.current) {
+                        const upBtn = document.createElement('div');
+                        upBtn.innerHTML = '<span class="material-icons-round" style="color: #94a3b8;">keyboard_return</span> <strong>Volver Atrás</strong>';
+                        upBtn.style.cssText = 'padding: 8px 12px; cursor: pointer; display: flex; align-items: center; gap: 10px; border-radius: 6px; color: #94a3b8; font-size: 0.85rem; border: 1px dashed rgba(255,255,255,0.1); margin-bottom: 5px;';
+                        upBtn.onmouseover = () => upBtn.style.background = 'rgba(255,255,255,0.05)';
+                        upBtn.onmouseout = () => upBtn.style.background = 'transparent';
+                        upBtn.onclick = () => openWebPicker(data.parent);
+                        pickerList.appendChild(upBtn);
+                    }
+
+                    // Listar carpetas
+                    data.folders.forEach(f => {
+                        const item = document.createElement('div');
+                        item.innerHTML = '<span class="material-icons-round" style="color: #f59e0b;">folder</span> <span>' + f + '</span>';
+                        item.style.cssText = 'padding: 8px 12px; cursor: pointer; display: flex; align-items: center; gap: 10px; border-radius: 6px; color: #e2e8f0; font-size: 0.85rem;';
+                        item.onmouseover = () => item.style.background = 'rgba(56,189,248,0.15)';
+                        item.onmouseout = () => item.style.background = 'transparent';
+                        item.onclick = () => {
+                            const nextPath = data.current ? (data.current.endsWith('\\') || data.current.endsWith('/') ? data.current + f : data.current + '\\' + f) : f;
+                            openWebPicker(nextPath);
+                        };
+                        pickerList.appendChild(item);
+                    });
+                })
+                .catch(err => {
+                    pickerList.innerHTML = '<div style="color:#ef4444; padding:10px; text-align:center;">Error de conexión.</div>';
                 });
+        }
+
+        btnAddExtFolder.onclick = () => openWebPicker('C:\\'); // Abrir en C: por defecto
+
+        const closePicker = () => folderPickerModal.classList.add('hidden');
+        document.getElementById('closePickerBtn').onclick = closePicker;
+        document.getElementById('cancelPickerBtn').onclick = closePicker;
+
+        document.getElementById('confirmPickerBtn').onclick = () => {
+            if (!currentPickerPath) {
+                alert("Por favor, entra a una carpeta primero.");
+                return;
+            }
+            const name = currentPickerPath.split(/[\/\\]/).filter(Boolean).pop() || currentPickerPath;
+            if (!externalFolders.find(f => f.path === currentPickerPath)) {
+                externalFolders.push({ name, path: currentPickerPath });
+                localStorage.setItem('tfte_ext_folders', JSON.stringify(externalFolders));
+            }
+            closePicker();
+            load('', currentPickerPath);
         };
 
         function load(dir, absDir = null) {
@@ -158,7 +335,7 @@
             });
 
             grid.innerHTML = '';
-            
+
             // Add external folder shortcuts at root
             if (!dir && !isAbsolute) {
                 externalFolders.forEach((ext, idx) => {
@@ -192,14 +369,14 @@
             images.forEach(name => {
                 const tile = document.createElement('div');
                 tile.className = 'tile tile-img';
-                
+
                 let src = '';
                 if (isAbsolute) {
                     src = '/api/serve-img?path=' + encodeURIComponent(absDir + '\\' + name);
                 } else {
                     src = '/preview/' + (dir ? dir + '/' : '') + name;
                 }
-                
+
                 tile.innerHTML = '<img loading="lazy" src="' + src + '"><span class="name"></span>';
                 tile.querySelector('.name').textContent = name;
                 tile.onclick = () => { lightboxImg.src = src; lightbox.classList.remove('hidden'); };
@@ -213,7 +390,7 @@
 
         const initialDir = new URLSearchParams(location.search).get('dir');
         const initialAbs = new URLSearchParams(location.search).get('abs_dir');
-        
+
         if (initialAbs) {
             load('', initialAbs);
         } else {
@@ -221,4 +398,5 @@
         }
     </script>
 </body>
+
 </html>

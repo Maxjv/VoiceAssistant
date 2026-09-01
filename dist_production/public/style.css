@@ -1,6 +1,7 @@
 :root {
     --bg-color: #0b0f19;
-    --header-bg: #1e293b;
+    --header-bg: #000b21;
+    /* <-- El azul oscuro de tu logo */
     --header-border: rgba(255, 255, 255, 0.08);
     --text-primary: #f8fafc;
     --text-secondary: #94a3b8;
@@ -703,15 +704,14 @@ textarea#textInput::-webkit-scrollbar {
 
 .btn-secundario:hover {
     background: #334155;
-}. t a s k - c a r d . c o l l a p s e d   . t a s k - t e x t ,   . t a s k - c a r d . c o l l a p s e d   . r e p o - r e s p o n s e ,   . t a s k - c a r d . c o l l a p s e d   . t a s k - r o w : n o t ( : f i r s t - c h i l d )   {   d i s p l a y :   n o n e   ! i m p o r t a n t ;   }   . t a s k - c a r d . c o l l a p s e d   . c h e v r o n - i c o n   {   t r a n s f o r m :   r o t a t e ( - 9 0 d e g ) ;   }  
- 
+}
+
 .task-card.collapsed .task-text,
 .task-card.collapsed .repo-response,
 .task-card.collapsed .task-row:not(:first-child) {
     display: none !important;
 }
+
 .task-card.collapsed .chevron-icon {
     transform: rotate(-90deg);
 }
-
-

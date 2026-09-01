@@ -403,7 +403,7 @@ if (previewIframe) {
 
     const savedUrls = JSON.parse(localStorage.getItem('tfte_url_history') || '[]');
     savedUrls.forEach(url => {
-        if (url !== "/preview/TFTE Next Steps MainApp 2.html" && htmlSelector) {
+        if (url !== "/preview/Project_Control.html" && htmlSelector) {
             const option = document.createElement('option');
             option.value = url;
             option.textContent = url.replace('/preview/', '');
@@ -549,7 +549,7 @@ if (previewIframe) {
                 if (innerBtn) {
                     innerBtn.click();
                 } else {
-                    console.warn('Este documento no tiene auto-guardado (no es TFTE Next Steps MainApp 2.html).');
+                    console.warn('Este documento no tiene auto-guardado (no es Project_Control.html).');
                 }
             } catch (err) {
                 console.error('No se pudo acceder al auto-guardado del documento:', err);
@@ -651,6 +651,47 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnCerrarQuota) btnCerrarQuota.onclick = cerrarModal;
 
     const sendToastBtn = document.getElementById('sendToastBtn');
+
+    // NUEVO: Instalar CLI si falla
+    const btnInstallCli = document.getElementById('btn-install-cli');
+    if (btnInstallCli) {
+        btnInstallCli.onclick = () => {
+            fetch('/api/install-cli', { method: 'POST' });
+            btnInstallCli.innerHTML = '<span class="material-icons-round" style="font-size:1rem; animation:spin 1s linear infinite;">sync</span> Instalando en consola...';
+        };
+    }
+
+    // NUEVO: Lógica del botón mágico de Login
+    const btnMagicoLogin = document.getElementById('btn-magico-login');
+    if (btnMagicoLogin) {
+        btnMagicoLogin.onclick = async () => {
+            btnMagicoLogin.innerHTML = '<span class="material-icons-round" style="animation: spin 1s linear infinite;">sync</span> Abriendo navegador...';
+            try {
+                await fetch('/api/auth-cli', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ backend: agentBackend })
+                });
+                document.getElementById('msg-login-enviado').style.display = 'block';
+                btnMagicoLogin.style.display = 'none';
+            } catch (e) {
+                alert("Error intentando abrir el login.");
+                btnMagicoLogin.innerHTML = 'Reintentar';
+            }
+        };
+    }
+
+    // NUEVO: Detectar nombre del proyecto y cambiar el botón
+    fetch('/api/project-info')
+        .then(r => r.json())
+        .then(info => {
+            const btnReactLabel = document.querySelector('#btnReact .rail-label');
+            if (btnReactLabel && info.name && info.name !== 'React App') {
+                btnReactLabel.textContent = info.name.length > 10 ? info.name.substring(0, 8) + '...' : info.name;
+                document.getElementById('btnReact').title = `Ver ${info.name}`;
+            }
+        }).catch(() => { });
+
     const responseToast = document.getElementById('responseToast');
 
     if (sendToastBtn && responseToast) {
@@ -667,10 +708,10 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 // Si la sesion ya esta activa en localStorage, ingresamos rápido pero verificamos cuota en silencio
                 if (localStorage.getItem('tfte_session_active') === 'true') {
-                    const contextModal = document.getElementById('contextModal');
-                    if (contextModal) {
-                        contextModal.style.display = 'none';
-                        contextModal.classList.add('hidden');
+                    const ctxModal = document.getElementById('contextModal');
+                    if (ctxModal) {
+                        ctxModal.style.display = 'none';
+                        ctxModal.classList.add('hidden');
                     }
                     markGeminiReady();
 
@@ -684,11 +725,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 const data = await res.json();
 
                 if (data.contextPath) {
-                    const contextModal = document.getElementById('contextModal');
-                    if (contextModal) {
+                    const ctxModal = document.getElementById('contextModal');
+                    if (ctxModal) {
                         // AUTO-CONEXION INVISIBLE E INMEDIATA
-                        contextModal.style.display = 'none';
-                        contextModal.classList.add('hidden');
+                        ctxModal.style.display = 'none';
+                        ctxModal.classList.add('hidden');
                     }
 
                     updateUIState('thinking');
@@ -728,10 +769,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     mostrarModalCreditos(agentBackend);
                 } else {
                     // Flujo manual si el servidor no tiene contexto
-                    const contextModal = document.getElementById('contextModal');
-                    if (contextModal) {
-                        contextModal.classList.remove('hidden');
-                        contextModal.style.display = 'flex';
+                    const ctxModal = document.getElementById('contextModal');
+                    if (ctxModal) {
+                        ctxModal.classList.remove('hidden');
+                        ctxModal.style.display = 'flex';
                     }
                     statusIndicator.className = 'status-indicator thinking';
                     statusText.textContent = 'Requiere contexto';
@@ -740,16 +781,16 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (err) {
                 console.error("Fallo auto-conexion:", err);
                 // Si falla la red, obligamos a manual
-                const contextModal = document.getElementById('contextModal');
-                if (contextModal) {
-                    contextModal.classList.remove('hidden');
-                    contextModal.style.display = 'flex';
+                const ctxModal = document.getElementById('contextModal');
+                if (ctxModal) {
+                    ctxModal.classList.remove('hidden');
+                    ctxModal.style.display = 'flex';
                 }
             }
         }
 
         // Lanzar autoConnect apenas arranca el DOM
-        autoConnect(); // DESACTIVADO TEMPORALMENTE para test de Live Reload
+        autoConnect();
 
         startContextBtn.addEventListener('click', async () => {
             try {
@@ -758,15 +799,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Leemos el contexto activo del localStorage (gestionado por app.html)
                 const activeCtxObjStr = localStorage.getItem('tfte_active_context_obj');
-                let activeCtx = 'C:\\TFTE';
-                let activeProj = 'React App';
+                const selectEl = document.getElementById('savedContextsSelect');
+                let activeCtx = selectEl ? selectEl.value : (localStorage.getItem('tfte_active_context') || '');
+                let activeProj = 'Mi Proyecto';
 
                 if (activeCtxObjStr) {
                     try {
                         const parsed = JSON.parse(activeCtxObjStr);
                         if (parsed && parsed.path) {
                             activeCtx = parsed.path;
-                            activeProj = parsed.name || 'React App';
+                            activeProj = parsed.name || 'Mi Proyecto';
                         }
                     } catch (e) { }
                 }
@@ -2481,62 +2523,5 @@ try {
     };
 } catch (e) {
     console.error("No se pudo conectar al Live Reload:", e);
-}
-
-// ==========================================
-// LÓGICA DE INICIALIZAR PROYECTO REACT
-// ==========================================
-function showActionStatus(text, icon) {
-    const el = document.getElementById('actionStatusLabel');
-    if (el) {
-        el.innerHTML = '<span class="material-icons-round" style="font-size:1rem;">' + icon + '</span> ' + text;
-        el.style.display = 'flex';
-    }
-}
-function hideActionStatus() {
-    const el = document.getElementById('actionStatusLabel');
-    if (el) el.style.display = 'none';
-}
-
-const btnInitReact = document.getElementById('btnInitReact');
-const initReactModal = document.getElementById('initReactModal');
-const cancelInitReactBtn = document.getElementById('cancelInitReactBtn');
-const confirmInitReactBtn = document.getElementById('confirmInitReactBtn');
-
-if (btnInitReact && initReactModal) {
-    btnInitReact.addEventListener('click', () => {
-        initReactModal.classList.remove('hidden');
-        initReactModal.style.display = 'flex';
-    });
-}
-if (cancelInitReactBtn && initReactModal) {
-    cancelInitReactBtn.addEventListener('click', () => {
-        initReactModal.classList.add('hidden');
-        initReactModal.style.display = 'none';
-    });
-}
-if (confirmInitReactBtn && initReactModal) {
-    confirmInitReactBtn.addEventListener('click', () => {
-        initReactModal.classList.add('hidden');
-        initReactModal.style.display = 'none';
-        
-        if (typeof showActionStatus === 'function') showActionStatus('Inicializando...', 'bolt');
-        
-        fetch('/api/init-react', { method: 'POST' })
-            .then(res => res.json())
-            .then(data => {
-                if(data.success) {
-                    if (typeof addTranscriptText === 'function') addTranscriptText('Se abrió una ventana para instalar React. El panel lo detectará cuando finalice.', 'ai');
-                    setTimeout(() => { if (typeof hideActionStatus === 'function') hideActionStatus(); }, 3000);
-                } else {
-                    alert('Error: ' + data.error);
-                    if (typeof hideActionStatus === 'function') hideActionStatus();
-                }
-            })
-            .catch(err => {
-                alert('Error de conexión');
-                if (typeof hideActionStatus === 'function') hideActionStatus();
-            });
-    });
 }
 

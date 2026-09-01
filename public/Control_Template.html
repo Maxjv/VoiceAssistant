@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -158,9 +159,10 @@
             border: 1px solid var(--border);
             border-radius: 8px;
             margin-bottom: 15px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             position: relative;
-            width: 50%; /* A la mitad */
+            width: 50%;
+            /* A la mitad */
             min-width: 350px;
         }
 
@@ -193,10 +195,11 @@
             color: var(--text-muted);
             transition: color 0.2s;
         }
-        
+
         .block-actions span:hover {
             color: var(--text-main);
         }
+
         .block-actions span.delete:hover {
             color: var(--danger);
         }
@@ -229,13 +232,13 @@
             min-height: 40px;
             padding-left: 45px;
         }
-        
+
         .inst-wrapper {
             position: relative;
             width: 100%;
             margin-top: 8px;
         }
-        
+
         .mic-btn {
             position: absolute;
             left: 8px;
@@ -252,38 +255,62 @@
             cursor: pointer;
             transition: all 0.2s;
         }
-        
+
         .mic-btn:hover {
             background: rgba(56, 189, 248, 0.2);
             transform: scale(1.1);
         }
-        
+
         .mic-btn.recording {
             background: var(--danger);
             color: white;
             animation: pulse 1.5s infinite;
         }
-        
+
         @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
-            70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+            0% {
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+            }
+
+            70% {
+                box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+            }
         }
 
         /* Nested indents */
-        .block-type-screen { border-left: 4px solid #8b5cf6; }
-        .block-type-card { border-left: 4px solid #3b82f6; }
-        .block-type-modal { border-left: 4px solid #f59e0b; }
-        .block-type-button { border-left: 4px solid #10b981; }
-        .block-type-list { border-left: 4px solid #ec4899; }
-        .block-type-filter { border-left: 4px solid #06b6d4; }
+        .block-type-screen {
+            border-left: 4px solid #8b5cf6;
+        }
 
+        .block-type-card {
+            border-left: 4px solid #3b82f6;
+        }
+
+        .block-type-modal {
+            border-left: 4px solid #f59e0b;
+        }
+
+        .block-type-button {
+            border-left: 4px solid #10b981;
+        }
+
+        .block-type-list {
+            border-left: 4px solid #ec4899;
+        }
+
+        .block-type-filter {
+            border-left: 4px solid #06b6d4;
+        }
     </style>
 </head>
+
 <body>
 
     <div class="palette">
-        <h2><span class="material-icons-round">category</span> Componentes</h2>
         <div class="palette-grid">
             <div class="palette-item" draggable="true" data-type="screen">
                 <span class="material-icons-round" style="color: #8b5cf6;">desktop_windows</span> Screen
@@ -308,7 +335,8 @@
 
     <div class="canvas-container">
         <div class="header-actions">
-            <button class="btn btn-primary hidden" id="btnSave" style="display: none;"><span class="material-icons-round">save</span> Guardar Tablero</button>
+            <button class="btn btn-primary hidden" id="btnSave" style="display: none;"><span
+                    class="material-icons-round">save</span> Guardar Tablero</button>
         </div>
         <div class="canvas">
             <div class="dropzone" id="mainCanvas">
@@ -319,7 +347,7 @@
 
     <script>
         // ESTADO DE DATOS (Se guardará en el propio HTML al inyectar)
-        let controlData = []; 
+        let controlData = [];
         /* __DATA_INJECTION_POINT__ */
 
         const mainCanvas = document.getElementById('mainCanvas');
@@ -364,7 +392,7 @@
                 e.preventDefault();
                 e.stopPropagation();
                 dz.classList.remove('drag-over');
-                
+
                 const type = e.dataTransfer.getData('text/plain');
                 if (!type) return;
 
@@ -372,14 +400,14 @@
                     // Moving an existing block
                     if (draggedElement !== dz && !draggedElement.contains(dz)) {
                         dz.appendChild(draggedElement);
-                        if(dz === mainCanvas) updateEmptyMsg();
+                        if (dz === mainCanvas) updateEmptyMsg();
                     }
                     draggedElement = null;
                 } else {
                     // Creating new block from palette
                     const block = createBlock(type);
                     dz.appendChild(block);
-                    if(dz === mainCanvas) updateEmptyMsg();
+                    if (dz === mainCanvas) updateEmptyMsg();
                 }
             });
         }
@@ -388,17 +416,17 @@
             const el = document.createElement('div');
             el.className = `block block-type-${type}`;
             el.draggable = true;
-            
+
             const titleText = type.charAt(0).toUpperCase() + type.slice(1);
-            
+
             const showInstruction = type !== 'screen';
-            const instructionHtml = showInstruction 
+            const instructionHtml = showInstruction
                 ? `<div class="inst-wrapper">
                     <textarea class="prop-input inst-input" placeholder="Instrucción de la tarea..." rows="2" oninput="this.style.height = ''; this.style.height = this.scrollHeight + 'px'; autoSaveControl()" onblur="autoSaveControl()">${config.instruction || ''}</textarea>
                     <button class="mic-btn" title="Dictar instrucción"><span class="material-icons-round" style="font-size: 1.1rem;">mic</span></button>
-                   </div>` 
+                   </div>`
                 : '';
-            
+
             el.innerHTML = `
                 <div class="block-header">
                     <div class="block-title">
@@ -459,7 +487,7 @@
         function serializeTree(container) {
             const data = [];
             const blocks = Array.from(container.children).filter(c => c.classList.contains('block'));
-            
+
             blocks.forEach(b => {
                 const type = b.className.match(/block-type-(\w+)/)[1];
                 const contentDiv = b.querySelector(':scope > .block-content');
@@ -468,14 +496,14 @@
                 const instInput = contentDiv ? contentDiv.querySelector(':scope > .inst-wrapper .inst-input') : null;
                 const instruction = instInput ? instInput.value : '';
                 const childDz = contentDiv ? contentDiv.querySelector(':scope > .child-dropzone') : null;
-                
+
                 const node = { type, title, instruction };
                 if (childDz) {
                     node.children = serializeTree(childDz);
                 }
                 data.push(node);
             });
-            
+
             return data;
         }
 
@@ -483,7 +511,7 @@
             data.forEach(node => {
                 const block = createBlock(node.type, { title: node.title, instruction: node.instruction });
                 container.appendChild(block);
-                
+
                 if (node.children && node.children.length > 0) {
                     const childDz = block.querySelector('.child-dropzone');
                     if (childDz) renderTree(node.children, childDz);
@@ -512,7 +540,7 @@
 
         // Init
         initDragAndDrop();
-        
+
         // --- MIC DICTATION ---
         let recognition = null;
         if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
@@ -528,29 +556,29 @@
                 alert("Tu navegador no soporta dictado por voz. Usa Chrome.");
                 return;
             }
-            
+
             const wrapper = btn.closest('.inst-wrapper');
             const textarea = wrapper.querySelector('textarea');
-            
+
             if (btn.classList.contains('recording')) {
                 recognition.stop();
                 btn.classList.remove('recording');
                 btn.innerHTML = '<span class="material-icons-round" style="font-size: 1.1rem;">mic</span>';
                 return;
             }
-            
+
             // Si ya hay alguien grabando, pararlo
             const activeMic = document.querySelector('.mic-btn.recording');
             if (activeMic) {
                 activeMic.click();
             }
-            
+
             btn.classList.add('recording');
             btn.innerHTML = '<span class="material-icons-round" style="font-size: 1.1rem;">stop</span>';
-            
+
             let finalTranscript = textarea.value ? textarea.value + " " : "";
-            
-            recognition.onresult = function(event) {
+
+            recognition.onresult = function (event) {
                 let interimTranscript = '';
                 for (let i = event.resultIndex; i < event.results.length; ++i) {
                     if (event.results[i].isFinal) {
@@ -564,8 +592,8 @@
                 textarea.style.height = textarea.scrollHeight + 'px';
                 textarea.dispatchEvent(new Event('input', { bubbles: true }));
             };
-            
-            recognition.onerror = function(event) {
+
+            recognition.onerror = function (event) {
                 console.error("Mic error:", event.error);
                 if (event.error === 'not-allowed') {
                     alert("Permiso de micrófono denegado. Habilita el micrófono en Chrome (candadito en la barra de URL).");
@@ -575,17 +603,17 @@
                 btn.classList.remove('recording');
                 btn.innerHTML = '<span class="material-icons-round" style="font-size: 1.1rem;">mic</span>';
             };
-            
-            recognition.onend = function() {
+
+            recognition.onend = function () {
                 btn.classList.remove('recording');
                 btn.innerHTML = '<span class="material-icons-round" style="font-size: 1.1rem;">mic</span>';
             };
-            
+
             recognition.start();
         }
 
         // Event delegation for dynamically created mic buttons
-        document.addEventListener('click', function(e) {
+        document.addEventListener('click', function (e) {
             const micBtn = e.target.closest('.mic-btn');
             if (micBtn) {
                 toggleDictation(micBtn);
@@ -594,7 +622,7 @@
 
         // Auto-save on dictate end so Voice dictation saves too!
         const originalToggleDictation = toggleDictation;
-        toggleDictation = function(btn) {
+        toggleDictation = function (btn) {
             // override to call autoSaveControl on end
             // Handled dynamically inside toggleDictation onresult
             originalToggleDictation(btn);
@@ -608,4 +636,5 @@
 
     </script>
 </body>
+
 </html>
