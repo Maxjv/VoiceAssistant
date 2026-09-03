@@ -6,10 +6,10 @@
   "bin": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "start npm start && npm run tunnel",
+    "dev": "node server.js",
     "start": "node server.js",
     "tunnel": "node start_tunnel.js",
-    "build": "xcopy public dist_production\\public /E /I /Y && xcopy watcher dist_production\\watcher /E /I /Y && del /F /Q dist_production\\VoiceAssistant_TFTE.exe 2>nul & pkg . --targets node18-win-x64 --output dist_production/VoiceAssistant_TFTE.exe"
+    "build": "xcopy public dist_production\\public /E /I /Y && xcopy watcher dist_production\\watcher /E /I /Y && del /F /Q dist_production\\AnywhereDesignServer.exe 2>nul & pkg . --targets node18-win-x64 --output dist_production/AnywhereDesignServer.exe"
   },
   "pkg": {
     "assets": [

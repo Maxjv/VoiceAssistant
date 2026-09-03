@@ -5,6 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>AnywhereDesign</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico">
     <link rel="stylesheet" href="style.css?v=13">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
@@ -1135,14 +1137,13 @@
                     console.log('├░┼©ÔÇØÔÇ× Cambios detectados por el radar. Recargando iframes estáticos...');
                     currentUpdate = data.lastUpdate;
 
-                    // Recarga iframes visibles sin flash blanco (usa location.reload en vez de about:blank)
-                    ['iframeReact', 'iframeHtml', 'iframePlan', 'iframeImgs'].forEach(id => {
+                    // Recarga SOLO iframes estáticos sin flash blanco (React/Vite maneja su propio HMR sin recargar la página)
+                    ['iframeHtml', 'iframePlan', 'iframeImgs'].forEach(id => {
                         const ifr = document.getElementById(id);
                         if (ifr && ifr.style.opacity !== '0') {
                             try {
                                 ifr.contentWindow.location.reload();
                             } catch (e) {
-                                // Fallback cross-origin: about:blank ├óÔÇáÔÇÖ src
                                 const currentSrc = ifr.src;
                                 ifr.src = 'about:blank';
                                 setTimeout(() => { ifr.src = currentSrc; }, 50);

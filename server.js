@@ -1,3 +1,30 @@
+const { execSync } = require('child_process');
+
+function killPort(portToKill) {
+    if (process.platform !== 'win32' || !portToKill) return;
+    try {
+        const out = execSync(`netstat -ano | findstr ":${portToKill} " | findstr "LISTENING"`, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'] });
+        const lines = out.trim().split('\n');
+        for (const line of lines) {
+            const parts = line.trim().split(/\s+/);
+            const pid = parseInt(parts[parts.length - 1], 10);
+            if (pid && pid !== process.pid) {
+                try { execSync(`taskkill /F /PID ${pid}`, { stdio: 'ignore' }); } catch (e) { }
+            }
+        }
+    } catch (e) { }
+}
+
+// --- SISTEMA DE ARRANQUE EN FRÍO (LIMPIEZA DE ZOMBIES) ---
+console.log("[Boot] Limpiando memoria y procesos anteriores...");
+if (process.platform === 'win32') {
+    [3000, 5173, 4000, 8080].forEach(killPort);
+    try { execSync('taskkill /F /IM cloudflared.exe', { stdio: 'ignore' }); } catch (e) { }
+}
+// ---------------------------------------------------------
+
+// A partir de aquí sigue tu código normal (const express = require('express'), etc...)
+
 const express = require('express');
 const cors = require('cors');
 const Groq = require('groq-sdk');
@@ -52,6 +79,15 @@ function parseCookies(req) {
     return list;
 }
 
+app.get('/favicon.ico', (req, res) => {
+    const fav = path.join(BASE_DIR, 'public', 'favicon.ico');
+    if (fs.existsSync(fav)) {
+        res.setHeader('Content-Type', 'image/x-icon');
+        return res.sendFile(fav);
+    }
+    res.status(204).end();
+});
+
 app.use(express.urlencoded({ extended: true }));
 app.post('/api/login', (req, res) => {
     const { pin } = req.body;
@@ -69,7 +105,18 @@ app.post('/api/login', (req, res) => {
 
 app.use((req, res, next) => {
     // Exenciones de seguridad absolutas para evitar fallos de fetch sin cookies
-    const exempted = ['/api/login', '/api/save-next-steps', '/api/control/save', '/api/tasks/pending'];
+    const exempted = [
+        '/api/login',
+        '/api/ready-url',
+        '/api/check-target',
+        '/splash.html',
+        '/logo.png',
+        '/favicon.ico',
+        '/app.ico',
+        '/api/save-next-steps',
+        '/api/control/save',
+        '/api/tasks/pending'
+    ];
     if (exempted.includes(req.path)) return next();
 
     const cookies = parseCookies(req);
@@ -217,7 +264,7 @@ app.use((req, res, next) => {
 });
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-const ROOT_DIR = process.env.CONTEXT_PATH || process.env.PROJECT_ROOT || process.cwd();
+let ROOT_DIR = process.env.CONTEXT_PATH || process.env.PROJECT_ROOT || process.cwd();
 
 // --- INICIO SISTEMA DE LICENCIAS (TRIAL DE 7 DÍAS) ---
 const LICENSE_FILE = path.join(BASE_DIR, '.tfte_license.json');
@@ -388,6 +435,16 @@ function detectAndLaunchProject(startDir) {
     let targetPort = 3000;
     let finalDir = startDir;
 
+    const isAssistant = (dir, pJson) => {
+        if (!dir) return true;
+        const norm = path.resolve(dir).toLowerCase();
+        if (norm === path.resolve(BASE_DIR).toLowerCase()) return true;
+        if (norm.endsWith('\\voiceassistant') || norm.endsWith('/voiceassistant')) return true;
+        if (norm.includes('anywheredesign')) return true;
+        if (pJson && (pJson.name === 'voiceassistant' || pJson.name === 'anywheredesign')) return true;
+        return false;
+    };
+
     // Escáner agnóstico: no le importa si es React, Vue o Angular. Solo busca package.json
     const checkPkg = (p) => {
         if (fs.existsSync(p)) {
@@ -397,27 +454,39 @@ function detectAndLaunchProject(startDir) {
     };
 
     let pkg = checkPkg(path.join(startDir, 'package.json'));
+    if (pkg && isAssistant(startDir, pkg)) pkg = null;
 
-    // Si no está ahí, buscar hacia arriba (padres)
-    if (!pkg) {
-        let parentDir = path.dirname(startDir);
-        while (startDir !== parentDir) {
-            pkg = checkPkg(path.join(parentDir, 'package.json'));
-            if (pkg) { finalDir = parentDir; break; }
-            startDir = parentDir;
-            parentDir = path.dirname(startDir);
-        }
-    }
-
-    // Si no está, buscar hacia abajo (1 nivel)
+    // 1. BUSCAR HACIA ABAJO PRIMERO (subdirectorios inmediatos como voice-command-dev, frontend, app)
     if (!pkg) {
         try {
-            const subdirs = fs.readdirSync(startDir, { withFileTypes: true }).filter(d => d.isDirectory() && d.name !== 'node_modules');
+            const subdirs = fs.readdirSync(startDir, { withFileTypes: true })
+                .filter(d => d.isDirectory() && d.name !== 'node_modules' && !d.name.startsWith('.'));
             for (const sub of subdirs) {
-                pkg = checkPkg(path.join(startDir, sub.name, 'package.json'));
-                if (pkg) { finalDir = path.join(startDir, sub.name); break; }
+                const subPath = path.join(startDir, sub.name);
+                const p = checkPkg(path.join(subPath, 'package.json'));
+                if (p && !isAssistant(subPath, p)) {
+                    pkg = p;
+                    finalDir = subPath;
+                    break;
+                }
             }
         } catch (e) { }
+    }
+
+    // 2. SI NO ESTÁ ABAJO, buscar hacia arriba (padres)
+    if (!pkg) {
+        let parentDir = path.dirname(startDir);
+        let curr = startDir;
+        while (curr !== parentDir) {
+            const p = checkPkg(path.join(parentDir, 'package.json'));
+            if (p && !isAssistant(parentDir, p)) {
+                pkg = p;
+                finalDir = parentDir;
+                break;
+            }
+            curr = parentDir;
+            parentDir = path.dirname(curr);
+        }
     }
 
     if (pkg) {
@@ -444,15 +513,38 @@ function detectAndLaunchProject(startDir) {
         }
 
         const installCmd = fs.existsSync(path.join(finalDir, 'node_modules')) ? '' : 'npm install && ';
-        const runCmd = scripts.dev ? 'npm run dev' : (scripts.start ? 'npm start' : '');
+        let runCmd = '';
+        if (deps['vite']) {
+            targetPort = 5173;
+            runCmd = scripts.dev ? 'npm run dev -- --port 5173' : 'npm start';
+        } else if (scripts.start) {
+            runCmd = 'npm start';
+        } else if (scripts.dev) {
+            runCmd = 'npm run dev';
+        }
+
+        // Limpiar el puerto objetivo antes de arrancar para evitar "Something is already running on port..."
+        killPort(targetPort);
 
         if (runCmd) {
-            // Ejecutamos en segundo plano, BLOQUEAMOS pestañas y le FORZAMOS su propio puerto
+            // Ejecutamos en segundo plano, 100% oculto (CI: 'true' evita prompts interactivos de React)
             activeAppProcess = exec(`${installCmd}${runCmd}`, {
                 cwd: finalDir,
-                env: { ...process.env, BROWSER: 'none', PORT: targetPort }
+                windowsHide: true,
+                env: { ...process.env, BROWSER: 'none', PORT: targetPort, CI: 'true' }
             });
-            activeAppProcess.stdout.on('data', (d) => console.log('[App]', d.trim()));
+            activeAppProcess.stdout.on('data', (d) => {
+                const text = d.toString();
+                console.log('[App]', text.trim());
+                const match = text.match(/(?:localhost|127\.0\.0\.1):(\d+)/i);
+                if (match && match[1]) {
+                    const detected = parseInt(match[1], 10);
+                    if (detected && detected !== TARGET_PORT) {
+                        console.log(`[Sistema] ¡Puerto real detectado en vivo!: ${detected} (reemplazando ${TARGET_PORT})`);
+                        TARGET_PORT = detected;
+                    }
+                }
+            });
             activeAppProcess.stderr.on('data', (d) => console.error('[App]', d.trim()));
         }
     }
@@ -461,7 +553,7 @@ function detectAndLaunchProject(startDir) {
 }
 
 const projectInfo = detectAndLaunchProject(ROOT_DIR);
-const PROJECT_TYPE = projectInfo.type;
+let PROJECT_TYPE = projectInfo.type;
 let TARGET_PORT = projectInfo.port;
 
 // Si NO es un proyecto Node (no hay package.json), asumimos Web Estática
@@ -469,21 +561,97 @@ if (PROJECT_TYPE === 'web') {
     TARGET_PORT = 8080;
     const webApp = express();
 
-    // Auto-detectar si el index.html está en root, /public o /dist
+    // 1. Buscar si ya existe index.html en root, /public o /dist
     let staticDir = ROOT_DIR;
-    if (!fs.existsSync(path.join(staticDir, 'index.html'))) {
-        if (fs.existsSync(path.join(ROOT_DIR, 'public', 'index.html'))) staticDir = path.join(ROOT_DIR, 'public');
-        else if (fs.existsSync(path.join(ROOT_DIR, 'dist', 'index.html'))) staticDir = path.join(ROOT_DIR, 'dist');
+    let foundHtml = null;
+
+    if (fs.existsSync(path.join(ROOT_DIR, 'index.html'))) {
+        staticDir = ROOT_DIR;
+        foundHtml = path.join(ROOT_DIR, 'index.html');
+    } else if (fs.existsSync(path.join(ROOT_DIR, 'public', 'index.html'))) {
+        staticDir = path.join(ROOT_DIR, 'public');
+        foundHtml = path.join(staticDir, 'index.html');
+    } else if (fs.existsSync(path.join(ROOT_DIR, 'dist', 'index.html'))) {
+        staticDir = path.join(ROOT_DIR, 'dist');
+        foundHtml = path.join(staticDir, 'index.html');
+    } else {
+        // 2. Si no se llama index.html, buscar si existe CUALQUIER otro archivo .html en la carpeta
+        try {
+            const files = fs.readdirSync(ROOT_DIR);
+            const anyHtml = files.find(f => f.toLowerCase().endsWith('.html'));
+            if (anyHtml) {
+                staticDir = ROOT_DIR;
+                foundHtml = path.join(ROOT_DIR, anyHtml);
+            }
+        } catch (e) { }
+    }
+
+    // 3. REGLA DE ORO: SI YA TIENE LO SUFICIENTE, NO CREAR NADA.
+    // Solo si NO existe NINGÚN archivo HTML en absoluto, construimos el entry point necesario:
+    let targetIndex = foundHtml;
+    if (!targetIndex) {
+        targetIndex = path.join(staticDir, 'index.html');
+        let scriptTags = '';
+        let styleTags = '';
+        try {
+            const files = fs.readdirSync(staticDir);
+            const jsFiles = files.filter(f => f.match(/\.(js|mjs)$/i));
+            const cssFiles = files.filter(f => f.match(/\.css$/i));
+            cssFiles.forEach(c => { styleTags += `\n    <link rel="stylesheet" href="./${c}">`; });
+            jsFiles.forEach(j => { scriptTags += `\n    <script src="./${j}"></script>`; });
+        } catch (e) { }
+
+        const initialHtml = `<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${process.env.PROJECT_NAME || 'Mi Proyecto'}</title>${styleTags}
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0b0f19;
+            color: #f8fafc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            text-align: center;
+        }
+        .card {
+            background: #1e293b;
+            padding: 2.5rem 3rem;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.08);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            max-width: 500px;
+        }
+        h1 { color: #38bdf8; margin: 0 0 10px 0; font-size: 2rem; }
+        p { color: #94a3b8; font-size: 1rem; line-height: 1.5; margin: 0 0 15px 0; }
+        .badge { display: inline-block; background: rgba(56, 189, 248, 0.15); color: #38bdf8; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>${process.env.PROJECT_NAME || 'Mi Proyecto'}</h1>
+        <p>Entorno web inicializado y conectado a AnywhereDesign.</p>
+        <span class="badge">Listo para diseñar</span>
+    </div>${scriptTags}
+</body>
+</html>`;
+        try {
+            fs.writeFileSync(targetIndex, initialHtml, 'utf8');
+            console.log(`[Sistema] No existía HTML previo. Generado entry point: ${targetIndex}`);
+        } catch (e) {
+            console.error("Error creando index.html:", e);
+        }
     }
 
     webApp.use(express.static(staticDir));
 
     webApp.use((req, res) => {
-        res.send(`<div style="color:#94a3b8; font-family:sans-serif; text-align:center; padding:50px; background:#0f172a; height:100vh; box-sizing:border-box;">
-            <h2 style="color:#38bdf8;">Proyecto Web Estático</h2>
-            <p>El servidor está activo, pero no se encontró un <b>index.html</b> en esta ruta.</p>
-            <p style="font-size:0.8rem; background:rgba(0,0,0,0.3); padding:10px; border-radius:8px; display:inline-block;">Ruta: ${staticDir}</p>
-        </div>`);
+        res.sendFile(targetIndex);
     });
     webApp.listen(TARGET_PORT, '127.0.0.1', () => console.log(`[Sistema] Servidor Web Interno listo en ${TARGET_PORT}`));
 }
@@ -533,11 +701,49 @@ app.get('/api/check-target', (req, res) => {
     });
 });
 
-app.use('/react', createProxyMiddleware({
+// Endpoint para el Splash: solo redirige cuando Cloudflare y el proyecto están 100% listos
+app.get('/api/ready-url', (req, res) => {
+    const urlPath = path.join(__dirname, 'current-url.txt');
+    let cfUrl = '';
+    if (fs.existsSync(urlPath)) {
+        try {
+            cfUrl = fs.readFileSync(urlPath, 'utf8').trim();
+        } catch (e) { }
+    }
+
+    if (!cfUrl || !cfUrl.startsWith('http')) {
+        return res.json({ ready: false });
+    }
+
+    const request = http.get(`http://127.0.0.1:${TARGET_PORT}/`, (response) => {
+        response.on('data', () => { });
+        response.on('end', () => {
+            if (!res.headersSent) {
+                if (response.statusCode >= 200 && response.statusCode < 400) {
+                    const ctx = projectContextPath ? `?context=${encodeURIComponent(projectContextPath)}` : '';
+                    const finalUrl = `${cfUrl}/${ctx}`;
+                    res.json({ ready: true, url: finalUrl });
+                } else {
+                    res.json({ ready: false });
+                }
+            }
+        });
+    }).on('error', () => {
+        if (!res.headersSent) res.json({ ready: false });
+    });
+
+    request.setTimeout(1500, () => {
+        request.destroy();
+        if (!res.headersSent) res.json({ ready: false });
+    });
+});
+
+const reactProxy = createProxyMiddleware({
     target: `http://127.0.0.1:${TARGET_PORT}`,
+    router: () => `http://127.0.0.1:${TARGET_PORT}`,
     changeOrigin: true,
     pathRewrite: { '^/react': '/' },
-    ws: true,
+    ws: false,
     onError: (err, req, res) => {
         if (!res.headersSent) {
             res.writeHead(200, { 'Content-Type': 'text/html' });
@@ -546,7 +752,7 @@ app.use('/react', createProxyMiddleware({
                     <h2 style="color:#38bdf8;">Levantando Servidor...</h2>
                     <p style="color:#94a3b8;">Tu proyecto se está compilando en segundo plano. Tomará unos instantes.</p>
                     <div style="width: 40px; height: 40px; border: 4px solid rgba(56, 189, 248, 0.3); border-top-color: #38bdf8; border-radius: 50%; animation: spin 1s linear infinite; margin-top: 20px;"></div>
-                    <style>@keyframes spin { to { transform: rotate(360deg); } }<\/style>
+                    <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
                     <script>
                         setInterval(() => {
                             fetch('/api/check-target')
@@ -554,16 +760,22 @@ app.use('/react', createProxyMiddleware({
                                 .then(d => { if (d.ready) location.reload(); })
                                 .catch(() => {});
                         }, 2000);
-                    <\/script>
+                    </script>
                 </div>
             `);
         }
     }
-}));
+});
+
+app.use('/react', reactProxy);
 
 app.get('/', (req, res) => {
     // CORRECCIÓN ENOENT: Usamos __dirname
     res.sendFile(path.join(__dirname, 'public', 'app.html'));
+});
+
+app.get(['/favicon.ico', '/app.ico'], (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'app.ico'));
 });
 
 app.get('/api/get-context', (req, res) => {
@@ -606,13 +818,15 @@ app.post('/api/set-context', (req, res) => {
         updateEnv('PROJECT_TYPE', projectType);
 
         fs.writeFileSync(envFile, envData.trim() + '\n', 'utf8');
-        res.json({ ok: true, type: projectType });
 
-        // 3. Reiniciar motor
-        setTimeout(() => {
-            console.log(`[Sistema] Cambiando a ${projectType.toUpperCase()} en: ${contextPath}. Reiniciando...`);
-            exec('taskkill /F /IM node.exe', () => process.exit(0));
-        }, 1500);
+        // 3. CAMBIO DE CONTEXTO EN CALIENTE (Sin matar Node ni tumbar Cloudflare)
+        console.log(`[Sistema] Cambiando en caliente a ${projectType.toUpperCase()} en: ${contextPath}...`);
+        ROOT_DIR = contextPath;
+        const newProj = detectAndLaunchProject(ROOT_DIR);
+        PROJECT_TYPE = newProj.type;
+        TARGET_PORT = newProj.port;
+
+        res.json({ ok: true, type: projectType, port: TARGET_PORT });
 
     } catch (err) {
         console.error("Error modificando .env:", err);
@@ -1273,8 +1487,30 @@ app.get('/api/historial', (req, res) => {
 
 const catchAllProxy = createProxyMiddleware({
     target: `http://127.0.0.1:${TARGET_PORT}`,
+    router: () => `http://127.0.0.1:${TARGET_PORT}`,
     changeOrigin: true,
-    ws: true
+    ws: false,
+    onError: (err, req, res) => {
+        if (!res.headersSent) {
+            res.writeHead(200, { 'Content-Type': 'text/html' });
+            res.end(`
+                <div style="background-color:#0f172a; color:white; font-family:sans-serif; text-align:center; height:100vh; display:flex; flex-direction:column; justify-content:center; align-items:center;">
+                    <h2 style="color:#38bdf8;">Levantando Servidor...</h2>
+                    <p style="color:#94a3b8;">Tu proyecto se está compilando en segundo plano. Tomará unos instantes.</p>
+                    <div style="width: 40px; height: 40px; border: 4px solid rgba(56, 189, 248, 0.3); border-top-color: #38bdf8; border-radius: 50%; animation: spin 1s linear infinite; margin-top: 20px;"></div>
+                    <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
+                    <script>
+                        setInterval(() => {
+                            fetch('/api/check-target')
+                                .then(r => r.json())
+                                .then(d => { if (d.ready) location.reload(); })
+                                .catch(() => {});
+                        }, 1500);
+                    </script>
+                </div>
+            `);
+        }
+    }
 });
 
 // Forzamos que el proxy NUNCA intercepte el frontend
@@ -1284,7 +1520,9 @@ app.use((req, res, next) => {
         req.path.startsWith('/api') ||
         req.path === '/app.html' ||
         req.path === '/app.js' ||
-        req.path === '/style.css';
+        req.path === '/style.css' ||
+        req.path === '/favicon.ico' ||
+        req.path === '/app.ico';
     if (isFrontend) {
         return next();
     }
@@ -1318,10 +1556,10 @@ let reloadTimeout;
 try {
     fs.watch(watchPath, { recursive: true }, (eventType, filename) => {
         if (!filename) return;
-        if (filename.includes('node_modules') || filename.includes('.git') || filename.includes('VoiceAssistant')) return;
+        if (filename.includes('node_modules') || filename.includes('.git') || filename.includes('VoiceAssistant') || filename.includes('.vite') || filename.includes('.nitro') || filename.includes('.tanstack') || filename.includes('.gen.')) return;
         if (filename && (filename.endsWith('.js') || filename.endsWith('.jsx') || filename.endsWith('.tsx') || filename.endsWith('.ts') || filename.endsWith('.css') || filename.endsWith('.html'))) {
             // Ignorar node_modules y archivos de build
-            if (filename.includes('.next') || filename.includes('build')) return;
+            if (filename.includes('.next') || filename.includes('build') || filename.includes('dist')) return;
             clearTimeout(reloadTimeout);
             reloadTimeout = setTimeout(() => {
                 console.log(`[Live Reload] Archivo modificado: ${filename} -> Actualizando radar...`);
@@ -1353,6 +1591,7 @@ try {
             if (newUrl && newUrl !== lastKnownUrl) {
                 lastKnownUrl = newUrl;
                 console.log(`[Sistema] Nueva URL detectada: ${newUrl}. Preparando correo...`);
+
 
                 const targetEmail = process.env.USER_EMAIL || process.env.NOTIFY_EMAIL;
                 if (!targetEmail) {
@@ -1397,15 +1636,79 @@ try {
 }
 
 // ==========================================
-// ARRANQUE DEL SERVIDOR
+// API PARA EL SPLASH SCREEN Y EL INSTALADOR
+// ==========================================
+app.get('/api/ready-url', (req, res) => {
+    try {
+        const urlFile = path.join(BASE_DIR, 'current-url.txt');
+        if (!fs.existsSync(urlFile)) return res.json({ ready: false });
+
+        const current = fs.readFileSync(urlFile, 'utf-8').trim();
+        if (!current.includes('trycloudflare.com')) return res.json({ ready: false });
+
+        const request = http.get(`http://127.0.0.1:${TARGET_PORT}/`, (response) => {
+            // Apenas responde con código 200, damos luz verde y DESTRUIMOS la conexión
+            if (response.statusCode >= 200 && response.statusCode < 400) {
+                if (!res.headersSent) res.json({ ready: true, url: current });
+            } else {
+                if (!res.headersSent) res.json({ ready: false });
+            }
+            request.destroy(); // <-- ESTO EVITA EL BUCLE INFINITO
+        }).on('error', () => {
+            if (!res.headersSent) res.json({ ready: false });
+        });
+
+        request.setTimeout(1500, () => {
+            request.destroy();
+            if (!res.headersSent) res.json({ ready: false });
+        });
+    } catch (e) {
+        if (!res.headersSent) res.json({ ready: false });
+    }
+});
+
+// ==========================================
+// ARRANQUE DEL SERVIDOR (MODO DIOS)
 // ==========================================
 const server = app.listen(port, '127.0.0.1', () => {
     console.log(`🚀 Servidor escuchando en http://localhost:${port}`);
+
+    // Limpiamos la basura de la sesión anterior
+    try { fs.writeFileSync(path.join(BASE_DIR, 'current-url.txt'), ''); } catch (e) { }
+
+    if (process.platform === 'win32') {
+        const { spawn, exec } = require('child_process');
+
+        // 1. NODE ENCIENDE CLOUDFLARE SOLO EN DESARROLLO (EN PRODUCCIÓN LO GESTIONA WATCHDOG)
+        if (process.env.ENV !== 'production') {
+            const cloudflarePath = path.join(BASE_DIR, 'cloudflared.exe');
+            if (fs.existsSync(cloudflarePath)) {
+                console.log('[Boot] Levantando túnel de Cloudflare...');
+                const cf = spawn(cloudflarePath, ['tunnel', '--url', `http://localhost:${port}`], { windowsHide: true });
+
+                // Leemos lo que escupe Cloudflare para extraer la URL viva
+                cf.stderr.on('data', (data) => {
+                    const output = data.toString();
+                    const urlMatch = output.match(/https:\/\/[a-zA-Z0-9-]+\.trycloudflare\.com/);
+                    if (urlMatch) {
+                        fs.writeFileSync(path.join(BASE_DIR, 'current-url.txt'), urlMatch[0]);
+                    }
+                });
+            }
+        }
+
+        // 2. SOLO ABRE EL SPLASH SI FUE LLAMADO DESDE EL ACCESO DIRECTO
+        if (process.argv.includes('--ui')) {
+            setTimeout(() => {
+                exec(`start http://localhost:${port}/splash.html`);
+            }, 500);
+        }
+    }
 });
 
 server.on('upgrade', (req, socket, head) => {
-    if (req.url.startsWith('/react/')) {
-        req.url = req.url.replace('/react', '');
+    socket.on('error', () => {});
+    if (reactProxy && reactProxy.upgrade) {
+        reactProxy.upgrade(req, socket, head);
     }
-    catchAllProxy.upgrade(req, socket, head);
 });

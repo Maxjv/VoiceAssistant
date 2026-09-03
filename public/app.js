@@ -441,8 +441,47 @@ if (previewIframe) {
             activeIframeEl.style.zIndex = '1';
             previewIframe = activeIframeEl;
             if (typeof applyZoom === 'function') applyZoom();
+            hideScrollbarsInIframe(activeIframeEl);
         }
     }
+
+    function hideScrollbarsInIframe(ifr) {
+        if (!ifr) return;
+        const inject = () => {
+            try {
+                if (ifr.contentDocument && ifr.contentDocument.head) {
+                    const id = 'ad-no-scroll';
+                    let style = ifr.contentDocument.getElementById(id);
+                    if (!style) {
+                        style = ifr.contentDocument.createElement('style');
+                        style.id = id;
+                        ifr.contentDocument.head.appendChild(style);
+                    }
+                    style.textContent = `
+                        html, body {
+                            overflow-y: auto !important;
+                            overflow-x: hidden !important;
+                            -webkit-overflow-scrolling: touch !important;
+                        }
+                        * {
+                            scrollbar-width: none !important;
+                            -ms-overflow-style: none !important;
+                        }
+                        *::-webkit-scrollbar {
+                            display: none !important;
+                            width: 0px !important;
+                            height: 0px !important;
+                            background: transparent !important;
+                        }
+                    `;
+                }
+            } catch (e) { }
+        };
+        ifr.addEventListener('load', inject);
+        inject();
+    }
+
+    [iframeReact, iframeHtml, iframePlan, iframeImgs].forEach(hideScrollbarsInIframe);
 
     if (htmlSelector) {
         htmlSelector.addEventListener('change', (e) => {
@@ -514,11 +553,25 @@ if (previewIframe) {
 
     if (btnReact) {
         btnReact.addEventListener('click', () => {
-            if (btnReact.classList.contains('active') && iframeReact) {
-                iframeReact.contentWindow.location.reload();
-            } else {
-                switchIframe(iframeReact);
-                setActiveTab(btnReact);
+            const wasActive = btnReact.classList.contains('active');
+            switchIframe(iframeReact);
+            setActiveTab(btnReact);
+
+            // Si ya estaba activo, o si el iframe está vacío / en error / about:blank, recargar limpiamente
+            let needsReload = wasActive;
+            try {
+                const doc = iframeReact.contentDocument;
+                if (!doc || !doc.body || !doc.body.innerHTML || doc.body.innerHTML.trim() === '' || doc.body.innerText.includes('refused to connect') || doc.body.innerText.includes('ECONNREFUSED') || doc.body.innerText.includes('Cannot GET')) {
+                    needsReload = true;
+                }
+            } catch (e) {
+                if (!iframeReact.src || iframeReact.src.includes('about:blank')) {
+                    needsReload = true;
+                }
+            }
+
+            if (needsReload) {
+                iframeReact.src = '/react?t=' + Date.now();
             }
         });
     }
@@ -748,25 +801,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         selectEl.value = data.contextPath;
                     }
 
-                    // Llamar al backend para setear el context path y projectName
-                    const setRes = await fetch('/api/set-context', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            contextPath: data.contextPath,
-                            projectName: data.projectName
-                        })
-                    });
-
-                    if (setRes.ok) {
-                        localStorage.setItem('tfte_session_active', 'true');
-                        markGeminiReady();
-                        // 🛑 ARQUITECTURA LIMPIA: Cero "pings" rotos, cero saludos falsos.
-                        return;
-                    }
-
-                    // Si algo falla, mostramos modal de creditos
-                    mostrarModalCreditos(agentBackend);
+                    // Contexto ya establecido por el instalador o servidor
+                    localStorage.setItem('tfte_session_active', 'true');
+                    markGeminiReady();
+                    return;
                 } else {
                     // Flujo manual si el servidor no tiene contexto
                     const ctxModal = document.getElementById('contextModal');
@@ -819,7 +857,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (lbl2) lbl2.innerText = activeProj;
 
                 try {
-                    await fetch('/api/set-context', {
+                    const setRes = await fetch('/api/set-context', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -827,6 +865,12 @@ document.addEventListener('DOMContentLoaded', () => {
                             projectName: activeProj
                         })
                     });
+                    if (setRes.ok && iframeReact) {
+                        // Recargamos el iframe principal inmediatamente para que enlace al nuevo proyecto sin F5
+                        iframeReact.src = '/react?t=' + Date.now();
+                        switchIframe(iframeReact);
+                        if (btnReact) setActiveTab(btnReact);
+                    }
                 } catch (err) { }
 
                 contextModal.classList.add('hidden');
@@ -2491,6 +2535,7 @@ try {
             console.log('🔄 Cambios detectados. Recargando iframe(s)...');
 
             document.querySelectorAll('iframe').forEach(ifr => {
+                if (ifr.id === 'iframeReact') return; // React/Vite/Next gestiona su propio HMR sin recargar la página entera
                 try {
                     const currentSrc = ifr.src;
                     if (currentSrc && !currentSrc.includes('about:blank')) {

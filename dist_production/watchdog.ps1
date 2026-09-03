@@ -37,8 +37,8 @@ function Start-Server {
             -RedirectStandardOutput (Join-Path $root "server.log") -RedirectStandardError (Join-Path $root "server.err.log") `
             -WindowStyle Hidden -PassThru).Id
     } else {
-        Log-Msg "Modo PRODUCCION detectado. Arrancando servidor compilado (VoiceAssistant_TFTE.exe)..."
-        $exe = Join-Path $root "VoiceAssistant_TFTE.exe"
+        Log-Msg "Modo PRODUCCION detectado. Arrancando servidor compilado (AnywhereDesignServer.exe)..."
+        $exe = Join-Path $root "AnywhereDesignServer.exe"
         return (Start-Process -FilePath $exe -WorkingDirectory $root `
             -RedirectStandardOutput (Join-Path $root "server.log") -RedirectStandardError (Join-Path $root "server.err.log") `
             -WindowStyle Hidden -PassThru).Id
@@ -68,25 +68,61 @@ function Start-ReactApp {
         return $null 
     }
 
-    $searchDir = $contextPath
     $reactDir = $null
-    while ($searchDir -and (Test-Path $searchDir)) {
-        if (Test-Path (Join-Path $searchDir "package.json")) {
-            $reactDir = $searchDir
-            break
+    
+    # 1. Buscar en la carpeta raíz
+    if (Test-Path (Join-Path $contextPath "package.json")) {
+        $pkgRaw = Get-Content (Join-Path $contextPath "package.json") -Raw -ErrorAction SilentlyContinue
+        if ($pkgRaw -and ($pkgRaw -notmatch '"name"\s*:\s*"voiceassistant"')) {
+            $reactDir = $contextPath
         }
-        $parent = Split-Path $searchDir -Parent
-        if ($parent -eq $searchDir) { break }
-        $searchDir = $parent
+    }
+
+    # 2. Buscar en subcarpetas inmediatas (ej: voice-command-dev, frontend, client)
+    if (-not $reactDir) {
+        $subfolders = Get-ChildItem -Path $contextPath -Directory -ErrorAction SilentlyContinue | Where-Object { $_.Name -ne "node_modules" -and -not $_.Name.StartsWith(".") }
+        foreach ($sub in $subfolders) {
+            if (Test-Path (Join-Path $sub.FullName "package.json")) {
+                $pkg = Get-Content (Join-Path $sub.FullName "package.json") -Raw -ErrorAction SilentlyContinue
+                if ($pkg -and ($pkg -notmatch '"name"\s*:\s*"voiceassistant"')) {
+                    $reactDir = $sub.FullName
+                    break
+                }
+            }
+        }
+    }
+
+    # 3. Solo si no encontró, buscar hacia arriba
+    if (-not $reactDir) {
+        $searchDir = Split-Path $contextPath -Parent
+        while ($searchDir -and (Test-Path $searchDir)) {
+            if (Test-Path (Join-Path $searchDir "package.json")) {
+                $pkgRaw = Get-Content (Join-Path $searchDir "package.json") -Raw -ErrorAction SilentlyContinue
+                if ($pkgRaw -and ($pkgRaw -notmatch '"name"\s*:\s*"voiceassistant"')) {
+                    $reactDir = $searchDir
+                    break
+                }
+            }
+            $parent = Split-Path $searchDir -Parent
+            if ($parent -eq $searchDir) { break }
+            $searchDir = $parent
+        }
     }
 
     if ($reactDir) {
-        Log-Msg "Encontrado package.json en: $reactDir. Disparando npm start..."
+        $runCmd = "npm start"
+        if (Test-Path (Join-Path $reactDir "package.json")) {
+            $pkgJson = Get-Content (Join-Path $reactDir "package.json") -Raw -ErrorAction SilentlyContinue | ConvertFrom-Json -ErrorAction SilentlyContinue
+            if ($pkgJson -and $pkgJson.scripts -and $pkgJson.scripts.dev -and -not $pkgJson.scripts.start) {
+                $runCmd = "npm run dev"
+            }
+        }
+        Log-Msg "Encontrado package.json en: $reactDir. Disparando $runCmd..."
         # Usamos un BAT dinamico para que Windows no tenga excusa
         $batPath = Join-Path $root "start_react_temp.bat"
-        Set-Content -Path $batPath -Value "@echo off`r`ncd /d `"$reactDir`"`r`nset BROWSER=none`r`nnpm start"
+        Set-Content -Path $batPath -Value "@echo off`r`ncd /d `"$reactDir`"`r`nset BROWSER=none`r`n$runCmd"
         
-        return (Start-Process -FilePath $batPath -WorkingDirectory $reactDir `
+        return (Start-Process -FilePath "cmd.exe" -ArgumentList "/c `"$batPath`"" -WorkingDirectory $reactDir `
             -RedirectStandardOutput (Join-Path $root "react.log") -RedirectStandardError (Join-Path $root "react.err.log") `
             -WindowStyle Hidden -PassThru).Id
     } else {
@@ -171,7 +207,7 @@ $cfPid     = Start-Cloudflared
 while ($true) {
     Start-Sleep -Seconds $CHECK_INTERVAL_SEC
 
-    if ((Test-Path (Join-Path $root "stop.txt")) -or (-not (Test-Path (Join-Path $root "VoiceAssistant_TFTE.exe")))) {
+    if ((Test-Path (Join-Path $root "stop.txt")) -or (-not (Test-Path (Join-Path $root "AnywhereDesignServer.exe")))) {
         Log-Msg "Apagando sistema (stop.txt detectado o EXE borrado)..."
         Stop-Process -Id $serverPid -Force -ErrorAction SilentlyContinue
         Stop-Process -Id $reactPid -Force -ErrorAction SilentlyContinue

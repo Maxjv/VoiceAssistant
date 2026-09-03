@@ -18,7 +18,14 @@ console.log(`${colors.cyan}=================================================${co
 const ROOT_DIR = __dirname;
 const DIST_DIR = path.join(ROOT_DIR, 'dist_production');
 
-// 1. Limpiar y recrear dist_production
+// 1. Asegurar respaldo de AnywhereDesignServer.exe en la raíz antes de limpiar
+const distExe = path.join(DIST_DIR, 'AnywhereDesignServer.exe');
+const rootExe = path.join(ROOT_DIR, 'AnywhereDesignServer.exe');
+if (fs.existsSync(distExe)) {
+    fs.copyFileSync(distExe, rootExe);
+}
+
+// Limpiar y recrear dist_production
 if (fs.existsSync(DIST_DIR)) {
     console.log(`${colors.yellow}[*] Eliminando carpeta dist_production anterior...${colors.reset}`);
     fs.rmSync(DIST_DIR, { recursive: true, force: true });
@@ -28,15 +35,18 @@ console.log(`${colors.green}[+] Carpeta dist_production creada exitosamente.${co
 
 // 2. Archivos a copiar
 const filesToCopy = [
-    'VoiceAssistant_TFTE.exe',
+    'AnywhereDesignServer.exe',
     'cloudflared.exe',
     'node.exe',
     'watchdog.ps1',
+    'launcher.ps1',
+    'launch.bat',
     'start.ps1',
     'stop.ps1',
     'rescue.ps1',
     'rescue.bat',
-    'Tfte_Rescue_Panel.pyw'
+    'Tfte_Rescue_Panel.pyw',
+    'app.ico'
 ];
 
 const dirsToCopy = [

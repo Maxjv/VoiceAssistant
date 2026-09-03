@@ -504,18 +504,38 @@ textarea#textInput::-webkit-scrollbar {
 .main-content {
     flex: 1;
     width: 100%;
-    background: #ffffff;
+    background: #0f172a;
     display: flex;
     position: relative;
-    overflow: hidden;
+    overflow: hidden !important;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+}
+
+.main-content::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
 }
 
 .app-iframe {
     position: absolute;
     top: 0;
     left: 0;
+    width: 100%;
+    height: 100%;
     transform-origin: top left;
     border: none;
+    overflow: hidden !important;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+}
+
+.app-iframe::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    background: transparent !important;
 }
 
 @keyframes pulse-error {
