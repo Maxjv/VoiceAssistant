@@ -61,19 +61,30 @@
     <div class="status">Preparando entorno local...</div>
 
     <script>
-        // El Splash le pregunta al servidor cada 1.5 segundos si Cloudflare ya terminó
         const checkServer = () => {
-            fetch('/api/ready-url')
-                .then(res => res.json())
-                .then(data => {
-                    if (data && data.ready && data.url) {
-                        // ¡Listo! Redirige esta misma pestaña a Cloudflare
-                        window.location.replace(data.url);
-                    }
-                })
-                .catch(() => { });
+            if (window.self !== window.top) {
+                // Estamos dentro del iframe de AnywhereDesign: esperar a que la app responda y cargar /react
+                fetch('/api/check-target')
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data && data.ready) {
+                            window.location.replace('/react?t=' + Date.now());
+                        }
+                    })
+                    .catch(() => { });
+            } else {
+                // Pestaña principal: redirigir al túnel Cloudflare
+                fetch('/api/ready-url')
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data && data.ready && data.url) {
+                            window.location.replace(data.url);
+                        }
+                    })
+                    .catch(() => { });
+            }
         };
-        setInterval(checkServer, 1500);
+        setInterval(checkServer, 1000);
     </script>
 </body>
 

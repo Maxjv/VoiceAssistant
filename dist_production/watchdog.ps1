@@ -198,7 +198,7 @@ try {
 }
 
 $serverPid = Start-Server
-$reactPid  = Start-ReactApp
+$reactPid  = $null
 $claudePid = Start-ClaudeWatcher
 $geminiPid = Start-GeminiWatcher
 $cfPid     = Start-Cloudflared
@@ -222,7 +222,6 @@ while ($true) {
     Update-CurrentUrl | Out-Null
 
     if (-not (Test-Alive $serverPid)) { Log-Msg "Reviviendo servidor Node..."; $serverPid = Start-Server }
-    if (-not (Test-Alive $reactPid))  { Log-Msg "Reviviendo React..."; $reactPid = Start-ReactApp }
     if (-not (Test-Alive $claudePid)) { $claudePid = Start-ClaudeWatcher }
     if (-not (Test-Alive $geminiPid)) { $geminiPid = Start-GeminiWatcher }
     
@@ -239,8 +238,8 @@ while ($true) {
                 if ($_.Exception.Response) {
                     $statusCode = $_.Exception.Response.StatusCode.value__
                 }
-                # Fallos críticos de Cloudflare o timeout total sin respuesta HTTP
-                if ($statusCode -eq 0 -or $statusCode -eq 502 -or $statusCode -eq 530 -or $statusCode -eq 522) {
+                # Fallos críticos de Cloudflare o timeout total sin respuesta HTTP (no 502, que es app compilando)
+                if ($statusCode -eq 530 -or $statusCode -eq 522) {
                     Log-Msg "WARNING: Túnel Cloudflare no responde (Código: $statusCode). Reiniciando..."
                     Stop-Process -Id $cfPid -Force -ErrorAction SilentlyContinue
                     $cfPid = Start-Cloudflared

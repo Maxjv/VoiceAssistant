@@ -1489,26 +1489,17 @@ const catchAllProxy = createProxyMiddleware({
     target: `http://127.0.0.1:${TARGET_PORT}`,
     router: () => `http://127.0.0.1:${TARGET_PORT}`,
     changeOrigin: true,
-    ws: false,
+    ws: true,
+    pathRewrite: { '^/react': '' },
     onError: (err, req, res) => {
         if (!res.headersSent) {
+            const splashFile = path.join(BASE_DIR, 'public', 'splash.html');
+            if (fs.existsSync(splashFile)) {
+                res.writeHead(200, { 'Content-Type': 'text/html' });
+                return res.end(fs.readFileSync(splashFile, 'utf8'));
+            }
             res.writeHead(200, { 'Content-Type': 'text/html' });
-            res.end(`
-                <div style="background-color:#0f172a; color:white; font-family:sans-serif; text-align:center; height:100vh; display:flex; flex-direction:column; justify-content:center; align-items:center;">
-                    <h2 style="color:#38bdf8;">Levantando Servidor...</h2>
-                    <p style="color:#94a3b8;">Tu proyecto se está compilando en segundo plano. Tomará unos instantes.</p>
-                    <div style="width: 40px; height: 40px; border: 4px solid rgba(56, 189, 248, 0.3); border-top-color: #38bdf8; border-radius: 50%; animation: spin 1s linear infinite; margin-top: 20px;"></div>
-                    <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
-                    <script>
-                        setInterval(() => {
-                            fetch('/api/check-target')
-                                .then(r => r.json())
-                                .then(d => { if (d.ready) location.reload(); })
-                                .catch(() => {});
-                        }, 1500);
-                    </script>
-                </div>
-            `);
+            res.end(`<!DOCTYPE html><html><body style="background:#0f172a;color:#38bdf8;text-align:center;padding-top:20vh;font-family:sans-serif;"><h2>Levantando proyecto...</h2><script>setTimeout(()=>location.reload(),1000);</script></body></html>`);
         }
     }
 });
@@ -1673,9 +1664,6 @@ app.get('/api/ready-url', (req, res) => {
 const server = app.listen(port, '127.0.0.1', () => {
     console.log(`🚀 Servidor escuchando en http://localhost:${port}`);
 
-    // Limpiamos la basura de la sesión anterior
-    try { fs.writeFileSync(path.join(BASE_DIR, 'current-url.txt'), ''); } catch (e) { }
-
     if (process.platform === 'win32') {
         const { spawn, exec } = require('child_process');
 
@@ -1708,7 +1696,10 @@ const server = app.listen(port, '127.0.0.1', () => {
 
 server.on('upgrade', (req, socket, head) => {
     socket.on('error', () => {});
-    if (reactProxy && reactProxy.upgrade) {
-        reactProxy.upgrade(req, socket, head);
+    if (req.url.startsWith('/react/') || req.url.startsWith('/react?') || req.url === '/react') {
+        req.url = req.url.replace('/react', '') || '/';
+    }
+    if (catchAllProxy && catchAllProxy.upgrade) {
+        catchAllProxy.upgrade(req, socket, head);
     }
 });

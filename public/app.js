@@ -856,6 +856,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (lbl1) lbl1.innerText = activeProj;
                 if (lbl2) lbl2.innerText = activeProj;
 
+                // 1. Mostrar inmediatamente el Splash en el iframe para cualquier cambio de contexto
+                if (iframeReact) {
+                    iframeReact.src = '/splash.html';
+                    switchIframe(iframeReact);
+                    if (btnReact) setActiveTab(btnReact);
+                }
+
                 try {
                     const setRes = await fetch('/api/set-context', {
                         method: 'POST',
@@ -865,12 +872,6 @@ document.addEventListener('DOMContentLoaded', () => {
                             projectName: activeProj
                         })
                     });
-                    if (setRes.ok && iframeReact) {
-                        // Recargamos el iframe principal inmediatamente para que enlace al nuevo proyecto sin F5
-                        iframeReact.src = '/react?t=' + Date.now();
-                        switchIframe(iframeReact);
-                        if (btnReact) setActiveTab(btnReact);
-                    }
                 } catch (err) { }
 
                 contextModal.classList.add('hidden');

@@ -215,7 +215,7 @@ begin
 
     // 2. Levantar el sistema en segundo plano y esperar a que Cloudflare y el proyecto esten 100% listos (SIN ABRIR NAVEGADOR)
     WizardForm.StatusLabel.Caption := 'Iniciando AnywhereDesign y verificando conexion de Cloudflare...';
-    Exec('powershell.exe', ExpandConstant('-ExecutionPolicy Bypass -WindowStyle Hidden -File "{app}\launcher.ps1" -WaitReadyOnly'), '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+    Exec('powershell.exe', ExpandConstant('-ExecutionPolicy Bypass -WindowStyle Hidden -File "{app}\launcher.ps1" -WaitReadyOnly'), ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, ResultCode);
 
     // 3. Mostrar el PIN cuando Cloudflare y el proyecto ya estan 100% listos
     MsgBox('¡Instalación completada con éxito!' + #13#10#13#10 +
@@ -224,7 +224,7 @@ begin
            'Haz clic en Aceptar para abrir la aplicación.', mbInformation, MB_OK);
 
     // 4. AHORA Y SOLO AHORA que el usuario dio Aceptar, abrir el navegador directo a la web
-    Exec('powershell.exe', ExpandConstant('-ExecutionPolicy Bypass -WindowStyle Hidden -File "{app}\launcher.ps1" -OpenBrowserOnly'), '', SW_HIDE, ewNoWait, ResultCode);
+    Exec('powershell.exe', ExpandConstant('-ExecutionPolicy Bypass -WindowStyle Hidden -File "{app}\launcher.ps1" -OpenBrowserOnly'), ExpandConstant('{app}'), SW_HIDE, ewNoWait, ResultCode);
   end;
 end;
 
