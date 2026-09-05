@@ -56,9 +56,9 @@
 
 <body>
 
-    <img src="logo.png" alt="AnywhereDesign Logo">
+    <img src="/logo.png" onerror="if(this.src!=='logo.png')this.src='logo.png';" alt="AnywhereDesign Logo">
     <div class="spinner"></div>
-    <div class="status">Preparando entorno local...</div>
+    <div class="status">Levantando servidor...</div>
 
     <script>
         const checkServer = () => {
@@ -74,7 +74,7 @@
                     .catch(() => { });
             } else {
                 // Pestaña principal: redirigir al túnel Cloudflare
-                fetch('/api/ready-url')
+                fetch('/api/ready-url' + (window.location.search || ''))
                     .then(res => res.json())
                     .then(data => {
                         if (data && data.ready && data.url) {
@@ -84,6 +84,7 @@
                     .catch(() => { });
             }
         };
+        checkServer();
         setInterval(checkServer, 1000);
     </script>
 </body>

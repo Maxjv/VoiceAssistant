@@ -1,10 +1,3 @@
-process.on('uncaughtException', (err) => {
-    console.error('[Protección Anticaídas] Uncaught Exception:', err ? (err.stack || err.message || err) : 'Error desconocido');
-});
-process.on('unhandledRejection', (reason) => {
-    console.error('[Protección Anticaídas] Unhandled Rejection:', reason);
-});
-
 const { execSync } = require('child_process');
 
 function killPort(portToKill) {
@@ -111,14 +104,179 @@ app.post('/api/login', (req, res) => {
     `);
 });
 
-// REGLA CRÍTICA: Bajo NINGÚN concepto se le muestra el cartel de PIN al usuario.
-// Autenticación transparente y automática permanente:
 app.use((req, res, next) => {
-    const cookies = parseCookies(req);
-    if (cookies.tfte_session !== ACCESS_PIN) {
-        res.setHeader('Set-Cookie', `tfte_session=${ACCESS_PIN}; Path=/; Max-Age=2592000; HttpOnly; SameSite=Lax`);
+    // Exenciones de seguridad absolutas para evitar fallos de fetch sin cookies
+    const exempted = [
+        '/api/login',
+        '/api/ready-url',
+        '/api/check-target',
+        '/splash.html',
+        '/logo.png',
+        '/favicon.ico',
+        '/app.ico',
+        '/api/save-next-steps',
+        '/api/control/save',
+        '/api/tasks/pending',
+        '/api/set-context',
+        '/api/get-context',
+        '/api/project-info'
+    ];
+    if (exempted.includes(req.path)) return next();
+
+    // 1. Acceso local desde la propia máquina (localhost / 127.0.0.1) no requiere PIN
+    const isLocal = req.ip === '127.0.0.1' || req.ip === '::1' || req.ip === '::ffff:127.0.0.1' || req.hostname === 'localhost' || req.hostname === '127.0.0.1';
+    if (isLocal) {
+        return next();
     }
-    next();
+
+    // 2. Autologin transparente mediante parámetro pin en la URL (al migrar de splash a Cloudflare)
+    if (req.query && req.query.pin && req.query.pin === ACCESS_PIN) {
+        res.setHeader('Set-Cookie', `tfte_session=${ACCESS_PIN}; Path=/; Max-Age=2592000; HttpOnly; SameSite=Lax`);
+        return next();
+    }
+
+    const cookies = parseCookies(req);
+    if (cookies.tfte_session === ACCESS_PIN) {
+        return next();
+    }
+
+    res.status(401).send(`
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>AnywhereDesign - Sincronización</title>
+            <style>
+                body {
+                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                    background-color: #0f172a;
+                    color: #f8fafc;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    height: 100vh;
+                    margin: 0;
+                }
+                .sync-card {
+                    background: #1e293b;
+                    padding: 2.5rem;
+                    border-radius: 1rem;
+                    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+                    width: 100%;
+                    max-width: 380px;
+                    text-align: center;
+                }
+                h2 { margin-bottom: 0.5rem; color: #38bdf8; }
+                p { color: #94a3b8; font-size: 0.9rem; margin-bottom: 2rem; }
+                .keypad-grid {
+                    display: grid;
+                    grid-template-columns: repeat(3, 1fr);
+                    gap: 10px;
+                    margin-bottom: 1.5rem;
+                }
+                .key-btn {
+                    background: #334155;
+                    color: white;
+                    border: none;
+                    padding: 15px;
+                    font-size: 1.25rem;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    transition: background 0.2s;
+                }
+                .key-btn:hover { background: #475569; }
+                .key-btn:active { background: #38bdf8; color: #0f172a; }
+                .display-box {
+                    background: #0f172a;
+                    border: 1px solid #334155;
+                    border-radius: 8px;
+                    padding: 15px;
+                    font-size: 1.5rem;
+                    letter-spacing: 0.5rem;
+                    margin-bottom: 1.5rem;
+                    min-height: 28px;
+                    color: #38bdf8;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                }
+                .action-btn {
+                    width: 100%;
+                    padding: 0.75rem;
+                    border-radius: 0.5rem;
+                    border: none;
+                    background: #38bdf8;
+                    color: #0f172a;
+                    font-weight: bold;
+                    font-size: 1rem;
+                    cursor: pointer;
+                }
+                .action-btn:hover { background: #0ea5e9; }
+            </style>
+        </head>
+        <body>
+            <div class="sync-card">
+                <h2>AnywhereDesign</h2>
+                <p>Verificación de Instancia</p>
+                <div class="display-box" id="pinDisplay"></div>
+                <div class="keypad-grid">
+                    <button class="key-btn" onclick="addNum(1)">1</button>
+                    <button class="key-btn" onclick="addNum(2)">2</button>
+                    <button class="key-btn" onclick="addNum(3)">3</button>
+                    <button class="key-btn" onclick="addNum(4)">4</button>
+                    <button class="key-btn" onclick="addNum(5)">5</button>
+                    <button class="key-btn" onclick="addNum(6)">6</button>
+                    <button class="key-btn" onclick="addNum(7)">7</button>
+                    <button class="key-btn" onclick="addNum(8)">8</button>
+                    <button class="key-btn" onclick="addNum(9)">9</button>
+                    <button class="key-btn" style="background:#ef4444;" onclick="clearNum()">C</button>
+                    <button class="key-btn" onclick="addNum(0)">0</button>
+                    <button class="key-btn" style="background:#10b981;" onclick="submitPin()">OK</button>
+                </div>
+            </div>
+            <script>
+                let currentPin = '';
+                const display = document.getElementById('pinDisplay');
+                
+                function addNum(n) {
+                    if (currentPin.length < 8) {
+                        currentPin += n;
+                        updateDisplay();
+                    }
+                }
+                
+                function clearNum() {
+                    currentPin = '';
+                    updateDisplay();
+                }
+                
+                function updateDisplay() {
+                    display.textContent = '•'.repeat(currentPin.length);
+                }
+                
+                function submitPin() {
+                    if(!currentPin) return;
+                    fetch('/api/login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: 'pin=' + encodeURIComponent(currentPin)
+                    }).then(res => {
+                        if (res.redirected) {
+                            window.location.href = res.url;
+                        } else {
+                            res.text().then(html => {
+                                document.open();
+                                document.write(html);
+                                document.close();
+                            });
+                        }
+                    });
+                }
+            </script>
+        </body>
+        </html>
+    `);
 });
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
@@ -295,15 +453,6 @@ function detectAndLaunchProject(startDir) {
     let targetPort = 3000;
     let finalDir = startDir;
 
-    if (!startDir || !fs.existsSync(startDir)) {
-        console.warn(`[Auto-Launch] Directorio no existe en disco: ${startDir}`);
-        if (activeAppProcess) {
-            try { execSync(`taskkill /pid ${activeAppProcess.pid} /t /f`, { stdio: 'ignore' }); } catch (e) { }
-            activeAppProcess = null;
-        }
-        return { type: 'web', port: STATIC_WEB_PORT, dir: startDir, notFound: true };
-    }
-
     const isAssistant = (dir, pJson) => {
         if (!dir) return true;
         const norm = path.resolve(dir).toLowerCase();
@@ -314,6 +463,7 @@ function detectAndLaunchProject(startDir) {
         return false;
     };
 
+    // Escáner agnóstico: no le importa si es React, Vue o Angular. Solo busca package.json
     const checkPkg = (p) => {
         if (fs.existsSync(p)) {
             try { return JSON.parse(fs.readFileSync(p, 'utf-8')); } catch (e) { }
@@ -321,22 +471,11 @@ function detectAndLaunchProject(startDir) {
         return null;
     };
 
-    // 1. ¿El directorio actual tiene directamente un package.json válido?
     let pkg = checkPkg(path.join(startDir, 'package.json'));
     if (pkg && isAssistant(startDir, pkg)) pkg = null;
 
-    // 2. ¿El directorio actual tiene su propio index.html u otros archivos HTML?
-    let hasOwnHtml = false;
-    try {
-        const files = fs.readdirSync(startDir);
-        hasOwnHtml = files.some(f => {
-            const lower = f.toLowerCase();
-            return lower.endsWith('.html') && lower !== 'project_control.html';
-        });
-    } catch (e) { }
-
-    // 3. Solo si NO tiene package.json propio Y NO tiene archivos HTML propios, buscar en subdirectorios inmediatos
-    if (!pkg && !hasOwnHtml) {
+    // 1. BUSCAR HACIA ABAJO PRIMERO (subdirectorios inmediatos como voice-command-dev, frontend, app)
+    if (!pkg) {
         try {
             const subdirs = fs.readdirSync(startDir, { withFileTypes: true })
                 .filter(d => d.isDirectory() && d.name !== 'node_modules' && !d.name.startsWith('.'));
@@ -348,34 +487,34 @@ function detectAndLaunchProject(startDir) {
                     finalDir = subPath;
                     break;
                 }
-                // Si el subdirectorio tiene archivos HTML propios
-                try {
-                    const subFiles = fs.readdirSync(subPath);
-                    const subHasHtml = subFiles.some(f => f.toLowerCase().endsWith('.html') && f.toLowerCase() !== 'project_control.html');
-                    if (subHasHtml) {
-                        hasOwnHtml = true;
-                        finalDir = subPath;
-                        break;
-                    }
-                } catch (e) { }
             }
         } catch (e) { }
     }
 
-    // 4. Si aun no hay pkg ni HTML propio, buscar hacia arriba en carpetas padre (por ejemplo si el usuario selecciono "src/interface" dentro de "C:\TFTE")
-    if (!pkg && !hasOwnHtml) {
-        let parentDir = path.dirname(startDir);
-        let levels = 0;
-        while (parentDir && parentDir !== path.dirname(parentDir) && levels < 4) {
-            const p = checkPkg(path.join(parentDir, 'package.json'));
-            if (p && !isAssistant(parentDir, p)) {
-                pkg = p;
-                finalDir = parentDir;
-                console.log(`[Auto-Launch] Proyecto detectado en directorio padre: ${finalDir}`);
-                break;
+    // 2. SI NO ESTÁ ABAJO, buscar hacia arriba (padres) SOLO SI la carpeta actual no tiene archivos HTML propios (excluyendo Project_Control.html)
+    if (!pkg) {
+        let hasOwnHtml = false;
+        try {
+            const files = fs.readdirSync(startDir);
+            hasOwnHtml = files.some(f => {
+                const lower = f.toLowerCase();
+                return lower.endsWith('.html') && lower !== 'project_control.html';
+            });
+        } catch (e) { }
+
+        if (!hasOwnHtml) {
+            let parentDir = path.dirname(startDir);
+            let curr = startDir;
+            while (curr !== parentDir) {
+                const p = checkPkg(path.join(parentDir, 'package.json'));
+                if (p && !isAssistant(parentDir, p)) {
+                    pkg = p;
+                    finalDir = parentDir;
+                    break;
+                }
+                curr = parentDir;
+                parentDir = path.dirname(curr);
             }
-            parentDir = path.dirname(parentDir);
-            levels++;
         }
     }
 
@@ -438,7 +577,7 @@ function detectAndLaunchProject(startDir) {
             activeAppProcess = spawn('cmd.exe', ['/c', fullCmd], {
                 cwd: finalDir,
                 windowsHide: true,
-                env: { ...process.env, BROWSER: 'none', PORT: targetPort, CI: 'false' }
+                env: { ...process.env, BROWSER: 'none', PORT: targetPort, CI: 'true' }
             });
 
             activeAppProcess.stdout.on('data', (d) => {
@@ -521,18 +660,51 @@ function ensureStaticWebServer() {
             return res.sendFile(targetIndex);
         }
 
-        // NUNCA escribir un index.html dummy en el directorio del usuario.
-        // Si no hay HTML disponible todavia, servir el splash oficial de AnywhereDesign.
-        const splashCandidates = [
-            path.join(BASE_DIR, 'public', 'splash.html'),
-            path.join(__dirname, 'public', 'splash.html')
-        ];
-        for (const sp of splashCandidates) {
-            if (fs.existsSync(sp)) {
-                return res.sendFile(sp);
-            }
+        const genPath = path.join(ROOT_DIR, 'index.html');
+        const initialHtml = `<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${process.env.PROJECT_NAME || 'Mi Proyecto'}</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0b0f19;
+            color: #f8fafc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            text-align: center;
         }
-        res.status(404).send('No se encontro ningun archivo HTML en el proyecto.');
+        .card {
+            background: #1e293b;
+            padding: 2.5rem 3rem;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.08);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            max-width: 500px;
+        }
+        h1 { color: #38bdf8; margin: 0 0 10px 0; font-size: 2rem; }
+        p { color: #94a3b8; font-size: 1rem; line-height: 1.5; margin: 0 0 15px 0; }
+        .badge { display: inline-block; background: rgba(56, 189, 248, 0.15); color: #38bdf8; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>${process.env.PROJECT_NAME || 'Mi Proyecto'}</h1>
+        <p>Entorno web inicializado y conectado a AnywhereDesign.</p>
+        <span class="badge">Listo para diseñar</span>
+    </div>
+</body>
+</html>`;
+        try { fs.writeFileSync(genPath, initialHtml, 'utf8'); } catch(e) {}
+        if (fs.existsSync(genPath)) {
+            return res.sendFile(genPath);
+        }
+        res.send(initialHtml);
     });
 
     try {
@@ -585,19 +757,21 @@ app.use('/preview', express.static(PREVIEW_DIR));
 // Sensor estricto y SEGURO: responde ready: true en cuanto el servidor del proyecto responde 200
 app.get('/api/check-target', (req, res) => {
     const request = http.get(`http://127.0.0.1:${TARGET_PORT}/`, (response) => {
-        const ok = response.statusCode >= 200 && response.statusCode < 400;
-        response.resume();
-        if (!res.headersSent) {
-            if (ok) {
-                isProjectCompiled = true;
+        response.on('data', () => { });
+        response.on('end', () => {
+            if (!res.headersSent) {
+                const ok = response.statusCode >= 200 && response.statusCode < 400;
+                if (ok) {
+                    isProjectCompiled = true;
+                }
+                res.json({ ready: ok, reason: ok ? undefined : 'Target status ' + response.statusCode });
             }
-            res.json({ ready: ok, reason: ok ? undefined : 'Target status ' + response.statusCode });
-        }
+        });
     }).on('error', (err) => {
         if (!res.headersSent) res.json({ ready: false, reason: 'Compiling project...' });
     });
 
-    request.setTimeout(3000, () => {
+    request.setTimeout(2000, () => {
         request.destroy();
         if (!res.headersSent) res.json({ ready: false, reason: 'Timeout' });
     });
@@ -629,28 +803,29 @@ app.get('/api/ready-url', (req, res) => {
     }
 
     const request = http.get(`http://127.0.0.1:${TARGET_PORT}/`, (response) => {
-        const ok = response.statusCode >= 200 && response.statusCode < 400;
-        response.resume();
-        if (!res.headersSent) {
-            if (ok) {
-                isProjectCompiled = true;
-                const ctx = (req.query.context || ROOT_DIR || process.env.CONTEXT_PATH || '').trim();
-                const cleanCf = cfUrl.replace(/\/+$/, '');
-                const queryParts = [];
-                if (ACCESS_PIN) queryParts.push(`pin=${encodeURIComponent(ACCESS_PIN)}`);
-                if (ctx) queryParts.push(`context=${encodeURIComponent(ctx)}`);
-                const queryString = queryParts.length > 0 ? `?${queryParts.join('&')}` : '';
-                const finalUrl = `${cleanCf}/${queryString}`;
-                res.json({ ready: true, url: finalUrl });
-            } else {
-                res.json({ ready: false, reason: 'Target returned non-200' });
+        response.on('data', () => { });
+        response.on('end', () => {
+            if (!res.headersSent) {
+                if (response.statusCode >= 200 && response.statusCode < 400) {
+                    isProjectCompiled = true;
+                    const ctx = (req.query.context || ROOT_DIR || process.env.CONTEXT_PATH || '').trim();
+                    const cleanCf = cfUrl.replace(/\/+$/, '');
+                    const queryParts = [];
+                    if (ACCESS_PIN) queryParts.push(`pin=${encodeURIComponent(ACCESS_PIN)}`);
+                    if (ctx) queryParts.push(`context=${encodeURIComponent(ctx)}`);
+                    const queryString = queryParts.length > 0 ? `?${queryParts.join('&')}` : '';
+                    const finalUrl = `${cleanCf}/${queryString}`;
+                    res.json({ ready: true, url: finalUrl });
+                } else {
+                    res.json({ ready: false, reason: 'Target returned non-200' });
+                }
             }
-        }
+        });
     }).on('error', () => {
         if (!res.headersSent) res.json({ ready: false, reason: 'Compiling project...' });
     });
 
-    request.setTimeout(3000, () => {
+    request.setTimeout(2000, () => {
         request.destroy();
         if (!res.headersSent) res.json({ ready: false, reason: 'Target timeout' });
     });
@@ -663,13 +838,9 @@ const reactProxy = createProxyMiddleware({
     pathRewrite: { '^/react': '/' },
     ws: false,
     onError: (err, req, res) => {
-        if (!res || typeof res.writeHead !== 'function') {
-            if (res && typeof res.destroy === 'function') try { res.destroy(); } catch (e) { }
-            return;
-        }
         if (!res.headersSent) {
             const isHtml = (req.headers.accept && req.headers.accept.includes('text/html')) || req.path === '/react' || req.path === '/';
-            if (isHtml && !isProjectCompiled) {
+            if (isHtml) {
                 const splashCandidates = [
                     path.join(BASE_DIR, 'public', 'splash.html'),
                     path.join(__dirname, 'public', 'splash.html')
@@ -690,44 +861,11 @@ const reactProxy = createProxyMiddleware({
     }
 });
 
-app.use('/react', (req, res, next) => {
-    if (!isProjectCompiled && PROJECT_TYPE === 'node') {
-        const isHtml = (req.headers.accept && req.headers.accept.includes('text/html')) || req.path === '/' || req.path === '';
-        if (isHtml) {
-            const splashCandidates = [
-                path.join(BASE_DIR, 'public', 'splash.html'),
-                path.join(__dirname, 'public', 'splash.html')
-            ];
-            for (const sp of splashCandidates) {
-                if (fs.existsSync(sp)) {
-                    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-                    return res.end(fs.readFileSync(sp));
-                }
-            }
-        }
-    }
-    next();
-}, reactProxy);
+app.use('/react', reactProxy);
 
-app.get('/', (req, res, next) => {
-    const isIframe = req.headers['sec-fetch-dest'] === 'iframe' || 
-                     req.query.ad_iframe === '1' || 
-                     req.headers['x-anywhere-iframe'];
-    if (isIframe) {
-        if (!isProjectCompiled && PROJECT_TYPE === 'node') {
-            const splashFile = path.join(BASE_DIR, 'public', 'splash.html');
-            if (fs.existsSync(splashFile)) {
-                res.setHeader('Content-Type', 'text/html; charset=utf-8');
-                return res.sendFile(splashFile);
-            }
-        }
-        return catchAllProxy(req, res, next);
-    }
+app.get('/', (req, res) => {
+    // CORRECCIÓN ENOENT: Usamos __dirname
     res.sendFile(path.join(__dirname, 'public', 'app.html'));
-});
-
-app.get('/react', (req, res) => {
-    res.redirect('/?ad_iframe=1');
 });
 
 app.get(['/favicon.ico', '/app.ico'], (req, res) => {
@@ -741,38 +879,15 @@ app.get('/api/get-context', (req, res) => {
     });
 });
 
-app.get('/api/check-folder', (req, res) => {
-    const raw = req.query.path ? req.query.path.trim() : '';
-    if (!raw) return res.json({ exists: false, error: 'Ruta vacia' });
-    const p = path.resolve(raw);
-    try {
-        if (fs.existsSync(p)) {
-            const stat = fs.statSync(p);
-            return res.json({ exists: stat.isDirectory(), path: p });
-        }
-    } catch (e) { }
-    return res.json({ exists: false, path: p });
-});
-
 app.post('/api/set-context', (req, res) => {
-    let { contextPath, projectName } = req.body;
+    const { contextPath, projectName } = req.body;
     if (!contextPath) return res.status(400).json({ error: 'Contexto requerido' });
-
-    contextPath = path.resolve(contextPath.trim());
-    if (!fs.existsSync(contextPath)) {
-        return res.status(400).json({ 
-            error: `La carpeta no existe en tu equipo: "${contextPath}". Verifica que este bien escrita.` 
-        });
-    }
 
     const envFile = path.join(BASE_DIR, '.env');
     try {
         // 1. CAMBIO DE CONTEXTO EN CALIENTE (detectar y lanzar proyecto real)
         ROOT_DIR = contextPath;
         const newProj = detectAndLaunchProject(ROOT_DIR);
-        if (newProj && newProj.dir) {
-            ROOT_DIR = newProj.dir;
-        }
         PROJECT_TYPE = newProj.type;
         TARGET_PORT = (PROJECT_TYPE === 'web') ? STATIC_WEB_PORT : newProj.port;
 
@@ -808,18 +923,18 @@ app.post('/api/set-context', (req, res) => {
             else envData += `\n${key}=${val}`;
         };
 
-        updateEnv('CONTEXT_PATH', ROOT_DIR);
+        updateEnv('CONTEXT_PATH', contextPath);
         if (projectName) updateEnv('PROJECT_NAME', projectName);
         updateEnv('PROJECT_TYPE', projectType);
 
         fs.writeFileSync(envFile, envData.trim() + '\n', 'utf8');
-        process.env.CONTEXT_PATH = ROOT_DIR;
+        process.env.CONTEXT_PATH = contextPath;
         if (projectName) process.env.PROJECT_NAME = projectName;
         process.env.PROJECT_TYPE = projectType;
 
-        console.log(`[Sistema] Contexto guardado: ${ROOT_DIR} (${projectType.toUpperCase()} en puerto ${TARGET_PORT})`);
+        console.log(`[Sistema] Contexto guardado: ${contextPath} (${projectType.toUpperCase()} en puerto ${TARGET_PORT})`);
 
-        res.json({ ok: true, type: projectType, port: TARGET_PORT, dir: ROOT_DIR, name: projectName || process.env.PROJECT_NAME });
+        res.json({ ok: true, type: projectType, port: TARGET_PORT, name: projectName || process.env.PROJECT_NAME });
 
     } catch (err) {
         console.error("Error modificando .env:", err);
@@ -1482,13 +1597,9 @@ const catchAllProxy = createProxyMiddleware({
     target: `http://127.0.0.1:${TARGET_PORT}`,
     router: () => `http://127.0.0.1:${TARGET_PORT}`,
     changeOrigin: true,
-    ws: false,
+    ws: true,
     pathRewrite: { '^/react': '' },
     onError: (err, req, res) => {
-        if (!res || typeof res.writeHead !== 'function') {
-            if (res && typeof res.destroy === 'function') try { res.destroy(); } catch (e) { }
-            return;
-        }
         if (!res.headersSent) {
             const isHtml = (req.headers.accept && req.headers.accept.includes('text/html')) || req.path === '/react' || req.path === '/';
             if (isHtml) {
@@ -1507,14 +1618,8 @@ const catchAllProxy = createProxyMiddleware({
     }
 });
 
-// Forzamos que el proxy NUNCA intercepte el frontend de AnywhereDesign
+// Forzamos que el proxy NUNCA intercepte el frontend
 app.use((req, res, next) => {
-    const isIframe = req.headers['sec-fetch-dest'] === 'iframe' || 
-                     req.query.ad_iframe === '1' || 
-                     req.headers['x-anywhere-iframe'];
-    if (isIframe && (req.path === '/' || req.path === '/react')) {
-        return catchAllProxy(req, res, next);
-    }
     const isFrontend = req.path === '/' ||
         req.path.startsWith('/preview') ||
         req.path.startsWith('/api') ||
@@ -1556,7 +1661,7 @@ let reloadTimeout;
 try {
     fs.watch(watchPath, { recursive: true }, (eventType, filename) => {
         if (!filename) return;
-        if (filename.includes('node_modules') || filename.includes('.git') || filename.includes('VoiceAssistant') || filename.includes('.vite') || filename.includes('.nitro') || filename.includes('.tanstack') || filename.includes('.gen.') || filename.toLowerCase().includes('project_control') || filename.toLowerCase().includes('control_template')) return;
+        if (filename.includes('node_modules') || filename.includes('.git') || filename.includes('VoiceAssistant') || filename.includes('.vite') || filename.includes('.nitro') || filename.includes('.tanstack') || filename.includes('.gen.')) return;
         if (filename && (filename.endsWith('.js') || filename.endsWith('.jsx') || filename.endsWith('.tsx') || filename.endsWith('.ts') || filename.endsWith('.css') || filename.endsWith('.html'))) {
             // Ignorar node_modules y archivos de build
             if (filename.includes('.next') || filename.includes('build') || filename.includes('dist')) return;
@@ -1640,8 +1745,8 @@ try {
 // ==========================================
 // ARRANQUE DEL SERVIDOR (MODO DIOS)
 // ==========================================
-const server = app.listen(port, () => {
-    console.log(`🚀 Servidor escuchando en el puerto ${port}`);
+const server = app.listen(port, '127.0.0.1', () => {
+    console.log(`🚀 Servidor escuchando en http://localhost:${port}`);
 
     if (process.platform === 'win32') {
         const { spawn, exec } = require('child_process');
@@ -1651,7 +1756,7 @@ const server = app.listen(port, () => {
             const cloudflarePath = path.join(BASE_DIR, 'cloudflared.exe');
             if (fs.existsSync(cloudflarePath)) {
                 console.log('[Boot] Levantando túnel de Cloudflare...');
-                const cf = spawn(cloudflarePath, ['tunnel', '--no-autoupdate', '--metrics', '127.0.0.1:0', '--url', `http://127.0.0.1:${port}`], { windowsHide: true });
+                const cf = spawn(cloudflarePath, ['tunnel', '--no-autoupdate', '--metrics', '127.0.0.1:0', '--url', `http://localhost:${port}`], { windowsHide: true });
 
                 // Leemos lo que escupe Cloudflare para extraer la URL viva
                 cf.stderr.on('data', (data) => {
@@ -1674,22 +1779,11 @@ const server = app.listen(port, () => {
 });
 
 server.on('upgrade', (req, socket, head) => {
-    socket.on('error', (e) => { console.log('[WS socket error]', e.message); });
-    console.log(`[WS UPGRADE] url: ${req.url} | origin: ${req.headers['origin']} | target: ${TARGET_PORT}`);
+    socket.on('error', () => {});
     if (req.url.startsWith('/react/') || req.url.startsWith('/react?') || req.url === '/react') {
         req.url = req.url.replace('/react', '') || '/';
     }
-    // Forzar Origin y Host locales para que Vite / React HMR no rechace la conexion por cross-origin
-    req.headers['origin'] = `http://127.0.0.1:${TARGET_PORT}`;
-    req.headers['host'] = `127.0.0.1:${TARGET_PORT}`;
-    try {
-        if (catchAllProxy && catchAllProxy.upgrade) {
-            catchAllProxy.upgrade(req, socket, head);
-        } else {
-            socket.destroy();
-        }
-    } catch (err) {
-        console.error('[WS UPGRADE ERROR]', err);
-        try { socket.destroy(); } catch (e) { }
+    if (catchAllProxy && catchAllProxy.upgrade) {
+        catchAllProxy.upgrade(req, socket, head);
     }
 });

@@ -5,9 +5,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>AnywhereDesign</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico">
-    <link rel="stylesheet" href="style.css?v=13">
+    <link rel="stylesheet" href="style.css?v=14">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
 </head>
@@ -123,8 +126,8 @@
         </aside>
 
         <main class="main-content" style="position: relative; background-color: #0f172a;">
-            <iframe id="iframeReact" class="app-iframe" src="/react" frameborder="0"
-                style="width: 100%; height: 100%; background-color: #0f172a;"></iframe>
+            <iframe id="iframeReact" class="app-iframe" src="/?ad_iframe=1" frameborder="0"
+                style="width: 100%; height: 100%; opacity: 1; z-index: 1;"></iframe>
             <iframe id="iframeHtml" class="app-iframe" src="/control-board" frameborder="0"
                 style="width: 100%; height: 100%; opacity: 0; pointer-events: none; z-index: -1;"></iframe>
             <iframe id="iframePlan" class="app-iframe" src="/plan.html" frameborder="0"
@@ -207,7 +210,7 @@
 
         <div id="responseToast" class="response-toast hidden">
             <div style="flex: 1;">
-                <p id="transcript" contenteditable="true"
+                <p id="transcript"
                     style="outline: none; border-bottom: 1px dashed rgba(255,255,255,0.3); padding-bottom: 4px; min-height: 20px;">
                 </p>
             </div>
@@ -974,13 +977,16 @@
             const folderInputHidden = document.getElementById('folderInput');
 
             let contexts = JSON.parse(localStorage.getItem('tfte_contexts') || '[]');
-            let activeContext = localStorage.getItem('tfte_active_context');
+            // Limpiar posibles erratas de VoiceAssitant con una sola 's'
+            contexts = contexts.map(c => c.replace(/VoiceAssitant/g, 'VoiceAssistant'));
+            contexts = [...new Set(contexts)];
+            let activeContext = (localStorage.getItem('tfte_active_context') || '').replace(/VoiceAssitant/g, 'VoiceAssistant');
 
             try {
                 const res = await fetch('/api/get-context');
                 if (res.ok) {
                     const data = await res.json();
-                    const serverContext = data.contextPath;
+                    const serverContext = data.contextPath ? data.contextPath.replace(/VoiceAssitant/g, 'VoiceAssistant') : '';
 
                     if (serverContext) {
                         if (!contexts.includes(serverContext)) contexts.push(serverContext);
@@ -1033,9 +1039,23 @@
                 updateActive(e.target.value);
             });
 
-            addContextBtn.addEventListener('click', () => {
+            addContextBtn.addEventListener('click', async () => {
                 const val = newContextInput.value.trim();
-                if (val && !contexts.includes(val)) {
+                if (!val) {
+                    alert('Por favor escribe la ruta de la carpeta.');
+                    return;
+                }
+                // Validar si la carpeta existe en el equipo
+                try {
+                    const chk = await fetch('/api/check-folder?path=' + encodeURIComponent(val));
+                    const chkData = await chk.json();
+                    if (!chkData.exists) {
+                        alert(`La ruta no existe en tu equipo:\n"${val}"\n\nVerifica que este bien escrita.`);
+                        return;
+                    }
+                } catch(e) { }
+
+                if (!contexts.includes(val)) {
                     contexts.push(val);
                     localStorage.setItem('tfte_contexts', JSON.stringify(contexts));
                     renderSelect();
@@ -1047,6 +1067,9 @@
 
             if (btnSettings && contextModal) {
                 btnSettings.addEventListener('click', () => {
+                    contexts = JSON.parse(localStorage.getItem('tfte_contexts') || '[]');
+                    contexts = [...new Set(contexts)];
+                    renderSelect();
                     contextModal.classList.remove('hidden');
                     contextModal.style.display = 'flex';
                 });
@@ -1119,7 +1142,7 @@
 
 
 
-    <script src="app.js?v=20260830_v5"></script>
+    <script src="app.js?v=20260905_v4"></script>
 
     <script>
         let currentUpdate = null;
@@ -1137,16 +1160,16 @@
                     console.log('├░┼©ÔÇØÔÇ× Cambios detectados por el radar. Recargando iframes estáticos...');
                     currentUpdate = data.lastUpdate;
 
-                    // Recarga SOLO iframes estáticos sin flash blanco (React/Vite maneja su propio HMR sin recargar la página)
+                    // Recarga SOLO iframes estaticos sin flash blanco (React/Vite maneja su propio HMR sin recargar la pagina)
                     ['iframeHtml', 'iframePlan', 'iframeImgs'].forEach(id => {
                         const ifr = document.getElementById(id);
-                        if (ifr && ifr.style.opacity !== '0') {
+                        if (ifr && ifr.style.opacity !== '0' && ifr.style.display !== 'none') {
                             try {
                                 ifr.contentWindow.location.reload();
                             } catch (e) {
-                                const currentSrc = ifr.src;
-                                ifr.src = 'about:blank';
-                                setTimeout(() => { ifr.src = currentSrc; }, 50);
+                                if (ifr.src && !ifr.src.includes('about:blank')) {
+                                    ifr.src = ifr.src;
+                                }
                             }
                         }
                     });

@@ -354,7 +354,61 @@ if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
     if (micBtn) micBtn.disabled = true;
 }
 
-if (micBtn) micBtn.addEventListener('click', toggleRecording);
+let userWantsFullscreen = false;
+
+function isFullscreen() {
+    return !!(document.fullscreenElement || document.webkitFullscreenElement);
+}
+
+function updateFullscreenIcon() {
+    if (fullscreenIcon) fullscreenIcon.textContent = (isFullscreen() || userWantsFullscreen) ? 'fullscreen_exit' : 'fullscreen';
+}
+
+async function enterFullscreen() {
+    userWantsFullscreen = true;
+    document.body.classList.add('zen-fullscreen');
+    const el = document.documentElement;
+    try {
+        if (!isFullscreen()) {
+            if (el.requestFullscreen) {
+                await el.requestFullscreen({ navigationUI: 'hide' });
+            } else if (el.webkitRequestFullscreen) {
+                el.webkitRequestFullscreen();
+            }
+        }
+        if (navigator.keyboard && navigator.keyboard.lock) {
+            try { await navigator.keyboard.lock(['Escape']); } catch (e) { }
+        }
+    } catch (err) {
+        console.warn('Pantalla completa:', err);
+    }
+    updateFullscreenIcon();
+}
+
+async function exitFullscreen() {
+    userWantsFullscreen = false;
+    document.body.classList.remove('zen-fullscreen');
+    try {
+        if (navigator.keyboard && navigator.keyboard.unlock) {
+            try { navigator.keyboard.unlock(); } catch (e) { }
+        }
+        if (document.exitFullscreen && isFullscreen()) {
+            await document.exitFullscreen();
+        } else if (document.webkitExitFullscreen && isFullscreen()) {
+            document.webkitExitFullscreen();
+        }
+    } catch (err) { }
+    updateFullscreenIcon();
+}
+
+if (micBtn) {
+    micBtn.addEventListener('click', () => {
+        if (userWantsFullscreen && !isFullscreen()) {
+            enterFullscreen();
+        }
+        toggleRecording();
+    });
+}
 
 if (refreshBtn && previewIframe) {
     refreshBtn.addEventListener('click', () => {
@@ -365,33 +419,26 @@ if (refreshBtn && previewIframe) {
 const fullscreenBtn = document.getElementById('fullscreenBtn');
 const fullscreenIcon = document.getElementById('fullscreenIcon');
 if (fullscreenBtn) {
-    const el = document.documentElement;
-
-    function isFullscreen() {
-        return !!(document.fullscreenElement || document.webkitFullscreenElement);
-    }
-
-    function updateFullscreenIcon() {
-        if (fullscreenIcon) fullscreenIcon.textContent = isFullscreen() ? 'fullscreen_exit' : 'fullscreen';
-    }
-
     fullscreenBtn.addEventListener('click', () => {
-        try {
-            if (!isFullscreen()) {
-                if (el.requestFullscreen) el.requestFullscreen();
-                else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
-            } else {
-                if (document.exitFullscreen) document.exitFullscreen();
-                else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
-            }
-        } catch (err) {
-            console.error('Pantalla completa no disponible:', err);
-            addTranscriptText('Tu navegador no permite pantalla completa acá. Probá "Agregar a pantalla de inicio" desde Safari para usarla sin barras.', 'error');
+        if (userWantsFullscreen || isFullscreen()) {
+            exitFullscreen();
+        } else {
+            enterFullscreen();
         }
     });
 
-    document.addEventListener('fullscreenchange', updateFullscreenIcon);
-    document.addEventListener('webkitfullscreenchange', updateFullscreenIcon);
+    document.addEventListener('fullscreenchange', () => {
+        if (!isFullscreen() && !userWantsFullscreen) {
+            document.body.classList.remove('zen-fullscreen');
+        }
+        updateFullscreenIcon();
+    });
+    document.addEventListener('webkitfullscreenchange', () => {
+        if (!isFullscreen() && !userWantsFullscreen) {
+            document.body.classList.remove('zen-fullscreen');
+        }
+        updateFullscreenIcon();
+    });
 }
 
 if (previewIframe) {
@@ -444,6 +491,26 @@ if (previewIframe) {
             hideScrollbarsInIframe(activeIframeEl);
         }
     }
+
+    // Apertura directa de contexto Web/App:
+    // El iframe ya inicia en /react directamente para apertura instantánea (CERO clics, cero splash).
+    if (iframeReact) {
+        switchIframe(iframeReact);
+    }
+    fetch('/api/check-target')
+        .then(r => r.json())
+        .then(d => {
+            // Solo si el servidor nos dice expresamente que está compilando, ponemos el splash
+            if (d && !d.ready && d.reason === 'Compiling project...') {
+                if (iframeReact && (iframeReact.src.endsWith('/react') || iframeReact.src.includes('/react?'))) {
+                    iframeReact.src = '/splash.html';
+                }
+            }
+        })
+        .catch(() => { });
+
+    // Nota: La migración de localhost a Cloudflare ocurre exclusivamente en splash.html antes de cargar la app.
+    // Una vez dentro de la app, no se fuerza recarga del navegador principal.
 
     function hideScrollbarsInIframe(ifr) {
         if (!ifr) return;
@@ -557,17 +624,21 @@ if (previewIframe) {
             switchIframe(iframeReact);
             setActiveTab(btnReact);
 
-            // Si ya estaba activo, o si el iframe está vacío / en error / about:blank, recargar limpiamente
+            // Si ya estaba activo, o si el iframe está vacío / en error / splash / about:blank, recargar limpiamente
             let needsReload = wasActive;
             try {
                 const doc = iframeReact.contentDocument;
-                if (!doc || !doc.body || !doc.body.innerHTML || doc.body.innerHTML.trim() === '' || doc.body.innerText.includes('refused to connect') || doc.body.innerText.includes('ECONNREFUSED') || doc.body.innerText.includes('Cannot GET')) {
+                if (!doc || !doc.body || !doc.body.innerHTML || doc.body.innerHTML.trim() === '' || doc.body.innerText.includes('refused to connect') || doc.body.innerText.includes('ECONNREFUSED') || doc.body.innerText.includes('Cannot GET') || doc.body.innerText.includes('PREPARANDO ENTORNO LOCAL')) {
                     needsReload = true;
                 }
             } catch (e) {
                 if (!iframeReact.src || iframeReact.src.includes('about:blank')) {
                     needsReload = true;
                 }
+            }
+
+            if (iframeReact.src && iframeReact.src.includes('splash.html')) {
+                needsReload = true;
             }
 
             if (needsReload) {
@@ -835,26 +906,56 @@ document.addEventListener('DOMContentLoaded', () => {
                 startContextBtn.disabled = true;
                 startContextBtn.textContent = 'Guardando ruta...';
 
-                // Leemos el contexto activo del localStorage (gestionado por app.html)
-                const activeCtxObjStr = localStorage.getItem('tfte_active_context_obj');
+                // Leemos el contexto activo: si escribió una ruta en el input, la usamos directamente; si no, la del dropdown
+                const newFolderInput = document.getElementById('newContextFolder');
                 const selectEl = document.getElementById('savedContextsSelect');
-                let activeCtx = selectEl ? selectEl.value : (localStorage.getItem('tfte_active_context') || '');
+                let activeCtx = '';
+                if (newFolderInput && newFolderInput.value && newFolderInput.value.trim()) {
+                    activeCtx = newFolderInput.value.trim();
+                    try {
+                        let ctxList = JSON.parse(localStorage.getItem('tfte_contexts') || '[]');
+                        if (!ctxList.includes(activeCtx)) {
+                            ctxList.push(activeCtx);
+                            localStorage.setItem('tfte_contexts', JSON.stringify(ctxList));
+                        }
+                    } catch (e) { }
+                } else if (selectEl && selectEl.value) {
+                    activeCtx = selectEl.value.trim();
+                } else {
+                    activeCtx = localStorage.getItem('tfte_active_context') || '';
+                }
                 let activeProj = 'Mi Proyecto';
 
+                const activeCtxObjStr = localStorage.getItem('tfte_active_context_obj');
                 if (activeCtxObjStr) {
                     try {
                         const parsed = JSON.parse(activeCtxObjStr);
-                        if (parsed && parsed.path) {
-                            activeCtx = parsed.path;
+                        if (parsed && parsed.path === activeCtx) {
                             activeProj = parsed.name || 'Mi Proyecto';
                         }
                     } catch (e) { }
                 }
+                if (activeProj === 'Mi Proyecto' && activeCtx) {
+                    const parts = activeCtx.split(/[\\/]/).filter(Boolean);
+                    if (parts.length > 0) activeProj = parts[parts.length - 1];
+                }
+                localStorage.setItem('tfte_active_context', activeCtx);
+                localStorage.setItem('tfte_active_context_obj', JSON.stringify({ path: activeCtx, name: activeProj }));
 
                 const lbl1 = document.getElementById('projectNameLabel1');
                 const lbl2 = document.getElementById('projectNameLabel2');
                 if (lbl1) lbl1.innerText = activeProj;
                 if (lbl2) lbl2.innerText = activeProj;
+
+                // Actualizar inmediatamente el botón del rail lateral con el nuevo nombre del proyecto
+                const btnReactLabel = document.querySelector('#btnReact .rail-label');
+                if (btnReactLabel) {
+                    btnReactLabel.textContent = activeProj.length > 10 ? activeProj.substring(0, 8) + '...' : activeProj;
+                }
+                const btnReactEl = document.getElementById('btnReact');
+                if (btnReactEl) {
+                    btnReactEl.title = `Ver ${activeProj}`;
+                }
 
                 // 1. Mostrar inmediatamente el Splash en el iframe para cualquier cambio de contexto
                 if (iframeReact) {
@@ -867,12 +968,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     const setRes = await fetch('/api/set-context', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
+                        credentials: 'same-origin',
                         body: JSON.stringify({
                             contextPath: activeCtx,
                             projectName: activeProj
                         })
                     });
-                } catch (err) { }
+                    const setData = await setRes.json();
+                    console.log('[AnywhereDesign] Contexto cambiado exitosamente:', setData);
+                } catch (err) {
+                    console.error('[AnywhereDesign] Error cambiando contexto:', err);
+                }
 
                 contextModal.classList.add('hidden');
                 setTimeout(() => contextModal.style.display = 'none', 300);
@@ -1053,7 +1159,7 @@ function toggleRecording() {
                 const p = document.createElement('p');
                 p.className = 'user-text';
                 p.textContent = '...';
-                p.contentEditable = 'true';
+                p.contentEditable = 'false';
                 p.style.outline = 'none';
                 p.id = 'editableTranscript';
                 transcriptEl.appendChild(p);
@@ -1101,6 +1207,7 @@ function toggleRecording() {
                 isListening = false;
                 updateUIState(queueBusy ? 'thinking' : 'ready');
                 const editableEl = document.getElementById('editableTranscript');
+                if (editableEl) editableEl.contentEditable = 'true';
                 const finalTxt = editableEl ? editableEl.textContent.trim() : finalTranscript.trim();
                 if (finalTxt && finalTxt !== '...') {
                     triggerSendCountdown(finalTxt);
@@ -1183,16 +1290,24 @@ if (keyboardBtn && textPanel && textInput && sendTextBtn) {
     folderInput.value = localStorage.getItem('tfte_last_folder') || '';
 
     keyboardBtn.addEventListener('click', () => {
+        if (userWantsFullscreen && !isFullscreen()) {
+            enterFullscreen();
+        }
         const abrir = textPanel.classList.contains('hidden');
         textPanel.classList.toggle('hidden', !abrir);
         const textPanelBackdrop = document.getElementById('textPanelBackdrop');
         if (textPanelBackdrop) {
             textPanelBackdrop.style.display = abrir ? 'block' : 'none';
         }
-        if (abrir) textInput.focus();
+        if (abrir) {
+            textInput.focus({ preventScroll: true });
+        }
     });
 
     function enviarDesdeTexto() {
+        if (userWantsFullscreen && !isFullscreen()) {
+            enterFullscreen();
+        }
         const text = textInput.value.trim();
         if (!text) return;
         const folder = folderInput.value.trim();
@@ -1396,6 +1511,7 @@ function pollAgente() {
 
                     // Forzar recarga de iframes para asegurar que el cambio se vea en vivo (producción o dev)
                     document.querySelectorAll('iframe').forEach(ifr => {
+                        if (ifr.id === 'iframeReact') return; // React/Vite/Next gestiona su propio HMR sin recargar la página entera
                         try {
                             const currentSrc = ifr.src;
                             if (currentSrc && !currentSrc.includes('about:blank')) {

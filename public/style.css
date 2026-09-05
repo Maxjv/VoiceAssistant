@@ -735,3 +735,33 @@ textarea#textInput::-webkit-scrollbar {
 .task-card.collapsed .chevron-icon {
     transform: rotate(-90deg);
 }
+
+/* ============ MODO FULLSCREEN ZEN / INMERSIVO ============ */
+body.zen-fullscreen {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+}
+
+body.zen-fullscreen .app-shell,
+body.zen-fullscreen .main-content {
+    height: 100% !important;
+    width: 100% !important;
+}
+
+body.zen-fullscreen .assistant-float {
+    z-index: 10000 !important;
+}
+
+body.zen-fullscreen .text-panel {
+    z-index: 10002 !important;
+}
+
+body.zen-fullscreen #textPanelBackdrop {
+    z-index: 10001 !important;
+}

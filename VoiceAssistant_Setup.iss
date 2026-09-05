@@ -7,7 +7,8 @@ OutputDir=.\Output
 OutputBaseFilename=Instalar_AnywhereDesign
 Compression=lzma
 SolidCompression=yes
-PrivilegesRequired=lowest
+PrivilegesRequired=admin
+PrivilegesRequiredOverridesAllowed=dialog
 Uninstallable=yes
 CloseApplications=no
 RestartApplications=no
@@ -24,6 +25,7 @@ VersionInfoVersion=1.0.0.0
 
 [Files]
 Source: "dist_production\AnywhereDesignServer.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "dist_production\server.js"; DestDir: "{app}"; Flags: ignoreversion
 Source: "dist_production\node.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "dist_production\cloudflared.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "dist_production\watchdog.ps1"; DestDir: "{app}"; Flags: ignoreversion
@@ -38,8 +40,8 @@ Source: "dist_production\node_modules\*"; DestDir: "{app}\node_modules"; Flags: 
 Source: "dist_production\app.ico"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
-Name: "{autodesktop}\Anywhere Design"; Filename: "{app}\launch.bat"; WorkingDir: "{app}"; IconFilename: "{app}\app.ico"; Flags: runminimized
-Name: "{autoprograms}\Anywhere Design"; Filename: "{app}\launch.bat"; WorkingDir: "{app}"; IconFilename: "{app}\app.ico"; Flags: runminimized
+Name: "{autodesktop}\Anywhere Design"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-WindowStyle Hidden -ExecutionPolicy Bypass -File .\launcher.ps1"; WorkingDir: "{app}"; IconFilename: "{app}\app.ico"
+Name: "{autoprograms}\Anywhere Design"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-WindowStyle Hidden -ExecutionPolicy Bypass -File .\launcher.ps1"; WorkingDir: "{app}"; IconFilename: "{app}\app.ico"
 Name: "{autodesktop}\Modo Rescate Anywhere Design"; Filename: "{app}\Tfte_Rescue_Panel.pyw"; WorkingDir: "{app}"; IconFilename: "{app}\app.ico"
 
 [UninstallDelete]
@@ -213,17 +215,23 @@ begin
       end;
     end;
 
-    // 2. Levantar el sistema en segundo plano y esperar a que Cloudflare y el proyecto esten 100% listos (SIN ABRIR NAVEGADOR)
+    // 2. Registro silencioso de reglas en el Firewall de Windows (evita popup de alerta al usuario)
+    WizardForm.StatusLabel.Caption := 'Configurando permisos de red seguros...';
+    Exec('netsh.exe', ExpandConstant('advfirewall firewall add rule name="AnywhereDesign Cloudflared" dir=in action=allow program="{app}\cloudflared.exe" enable=yes profile=any'), '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+    Exec('netsh.exe', ExpandConstant('advfirewall firewall add rule name="AnywhereDesign Server" dir=in action=allow program="{app}\AnywhereDesignServer.exe" enable=yes profile=any'), '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+    Exec('netsh.exe', ExpandConstant('advfirewall firewall add rule name="AnywhereDesign Node" dir=in action=allow program="{app}\node.exe" enable=yes profile=any'), '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+
+    // 3. Levantar el sistema en segundo plano y esperar a que Cloudflare y el proyecto esten 100% listos (SIN ABRIR NAVEGADOR)
     WizardForm.StatusLabel.Caption := 'Iniciando AnywhereDesign y verificando conexion de Cloudflare...';
     Exec('powershell.exe', ExpandConstant('-ExecutionPolicy Bypass -WindowStyle Hidden -File "{app}\launcher.ps1" -WaitReadyOnly'), ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, ResultCode);
 
-    // 3. Mostrar el PIN cuando Cloudflare y el proyecto ya estan 100% listos
+    // 4. Mostrar el PIN cuando Cloudflare y el proyecto ya estan 100% listos
     MsgBox('¡Instalación completada con éxito!' + #13#10#13#10 +
            'AnywhereDesign está listo y tu proyecto se ha conectado correctamente.' + #13#10#13#10 +
            '🔒 Tu PIN de seguridad para acceder es: 1234' + #13#10#13#10 +
            'Haz clic en Aceptar para abrir la aplicación.', mbInformation, MB_OK);
 
-    // 4. AHORA Y SOLO AHORA que el usuario dio Aceptar, abrir el navegador directo a la web
+    // 5. AHORA Y SOLO AHORA que el usuario dio Aceptar, abrir el navegador directo a la web
     Exec('powershell.exe', ExpandConstant('-ExecutionPolicy Bypass -WindowStyle Hidden -File "{app}\launcher.ps1" -OpenBrowserOnly'), ExpandConstant('{app}'), SW_HIDE, ewNoWait, ResultCode);
   end;
 end;
@@ -237,6 +245,9 @@ begin
     SaveStringToFile(ExpandConstant('{app}\stop.txt'), 'stop', False);
     Sleep(1000);
     Exec('cmd.exe', '/c taskkill /f /im node.exe /im cloudflared.exe /im powershell.exe /im AnywhereDesignServer.exe', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+    Exec('netsh.exe', 'advfirewall firewall delete rule name="AnywhereDesign Cloudflared"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+    Exec('netsh.exe', 'advfirewall firewall delete rule name="AnywhereDesign Server"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+    Exec('netsh.exe', 'advfirewall firewall delete rule name="AnywhereDesign Node"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
     Sleep(1000);
   end;
 end;

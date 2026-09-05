@@ -46,6 +46,7 @@ const filesToCopy = [
     'rescue.ps1',
     'rescue.bat',
     'Tfte_Rescue_Panel.pyw',
+    'server.js',
     'app.ico'
 ];
 

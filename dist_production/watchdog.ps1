@@ -17,6 +17,7 @@ function Log-Msg($msg) {
 }
 
 Log-Msg "INICIANDO WATCHDOG EN CARPETA: $root"
+$env:WATCHDOG_MANAGED = "true"
 
 $IsDevMode = $false
 $globalEnvPath = Join-Path $root ".env"
@@ -31,9 +32,11 @@ function Test-Alive($processId) {
 }
 
 function Start-Server {
-    if ($IsDevMode) {
-        Log-Msg "Modo DESARROLLO detectado. Arrancando servidor Node (node server.js)..."
-        return (Start-Process -FilePath "node" -ArgumentList "server.js" -WorkingDirectory $root `
+    if ($IsDevMode -or (Test-Path (Join-Path $root "server.js"))) {
+        Log-Msg "Arrancando servidor Node (node server.js)..."
+        $nodeExe = Join-Path $root "node.exe"
+        if (-not (Test-Path $nodeExe)) { $nodeExe = "node" }
+        return (Start-Process -FilePath $nodeExe -ArgumentList "server.js" -WorkingDirectory $root `
             -RedirectStandardOutput (Join-Path $root "server.log") -RedirectStandardError (Join-Path $root "server.err.log") `
             -WindowStyle Hidden -PassThru).Id
     } else {
@@ -149,7 +152,7 @@ function Start-Cloudflared {
     Remove-Item $errFile -ErrorAction SilentlyContinue
     $cfPath = Join-Path $root "cloudflared.exe"
     
-    $proc = Start-Process -FilePath $cfPath -ArgumentList "tunnel", "--url", "http://localhost:$Port" -WorkingDirectory $root `
+    $proc = Start-Process -FilePath $cfPath -ArgumentList "tunnel", "--no-autoupdate", "--metrics", "127.0.0.1:0", "--url", "http://localhost:$Port" -WorkingDirectory $root `
         -RedirectStandardError $errFile -WindowStyle Hidden -PassThru
     return $proc.Id
 }
@@ -179,23 +182,24 @@ function Update-CurrentUrl {
     return $null
 }
 
-# LA ESCOBA: Mata procesos viejos
+# LA ESCOBA: Mata procesos viejos específicos de AnywhereDesign
 Log-Msg "Limpiando procesos viejos..."
 Stop-Process -Name "VoiceAssistant_TFTE" -Force -ErrorAction SilentlyContinue
+Stop-Process -Name "AnywhereDesignServer" -Force -ErrorAction SilentlyContinue
 Stop-Process -Name "cloudflared" -Force -ErrorAction SilentlyContinue
-Stop-Process -Name "node" -Force -ErrorAction SilentlyContinue
+
+# Matar solo el proceso de Node que pertenezca a AnywhereDesign (respetando React en puerto 3000)
+try {
+    $nodeProcs = Get-CimInstance Win32_Process -Filter "Name = 'node.exe'" -ErrorAction SilentlyContinue
+    foreach ($np in $nodeProcs) {
+        if ($np.CommandLine -and ($np.CommandLine -like "*server.js*" -or $np.CommandLine -like "*$root*")) {
+            Stop-Process -Id $np.ProcessId -Force -ErrorAction SilentlyContinue
+        }
+    }
+} catch { }
 
 # ARRANCAMOS
-Log-Msg "Verificando estado de sesión de Antigravity (IA)..."
-Write-Host ">>> Si la sesión caducó, se abrirá el navegador en breve. <<<" -ForegroundColor Yellow
-
-# Hacemos el ping en background para NO bloquear el arranque rápido (Fase 4 - Fix)
-try {
-    Start-Process -FilePath "agy" -ArgumentList "-p `"Ping del sistema`" --mode plan --output-format text --dangerously-skip-permissions" -WindowStyle Hidden
-    Log-Msg "Ping asíncrono a la IA lanzado correctamente."
-} catch {
-    Log-Msg "Aviso: No se pudo verificar la sesión de IA."
-}
+Log-Msg "Iniciando servicios en segundo plano..."
 
 $serverPid = Start-Server
 $reactPid  = $null
@@ -228,24 +232,5 @@ while ($true) {
     if (-not (Test-Alive $cfPid)) { 
         Log-Msg "Reviviendo Cloudflared..."; 
         $cfPid = Start-Cloudflared 
-    } else {
-        # FASE 3.1: Validación activa del túnel
-        if ($globalLastUrl -ne "") {
-            try {
-                $null = Invoke-WebRequest -Uri $globalLastUrl -TimeoutSec 15 -UseBasicParsing -ErrorAction Stop
-            } catch {
-                $statusCode = 0
-                if ($_.Exception.Response) {
-                    $statusCode = $_.Exception.Response.StatusCode.value__
-                }
-                # Fallos críticos de Cloudflare o timeout total sin respuesta HTTP (no 502, que es app compilando)
-                if ($statusCode -eq 530 -or $statusCode -eq 522) {
-                    Log-Msg "WARNING: Túnel Cloudflare no responde (Código: $statusCode). Reiniciando..."
-                    Stop-Process -Id $cfPid -Force -ErrorAction SilentlyContinue
-                    $cfPid = Start-Cloudflared
-                    $globalLastUrl = ""
-                }
-            }
-        }
     }
 }

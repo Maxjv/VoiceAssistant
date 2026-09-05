@@ -56,35 +56,44 @@
 
 <body>
 
-    <img src="logo.png" alt="AnywhereDesign Logo">
+    <img src="/logo.png" onerror="if(this.src!=='logo.png')this.src='logo.png';" alt="AnywhereDesign Logo">
     <div class="spinner"></div>
-    <div class="status">Preparando entorno local...</div>
+    <div class="status">Levantando servidor...</div>
 
     <script>
+        let isRedirecting = false;
+        let pollTimer = null;
+
         const checkServer = () => {
+            if (isRedirecting) return;
             if (window.self !== window.top) {
                 // Estamos dentro del iframe de AnywhereDesign: esperar a que la app responda y cargar /react
                 fetch('/api/check-target')
                     .then(res => res.json())
                     .then(data => {
-                        if (data && data.ready) {
-                            window.location.replace('/react?t=' + Date.now());
+                        if (data && data.ready && !isRedirecting) {
+                            isRedirecting = true;
+                            if (pollTimer) clearInterval(pollTimer);
+                            window.location.replace('/?ad_iframe=1');
                         }
                     })
                     .catch(() => { });
             } else {
-                // Pestaña principal: redirigir al túnel Cloudflare
-                fetch('/api/ready-url')
+                // Pestana principal: redirigir al tunel Cloudflare
+                fetch('/api/ready-url' + (window.location.search || ''))
                     .then(res => res.json())
                     .then(data => {
-                        if (data && data.ready && data.url) {
+                        if (data && data.ready && data.url && !isRedirecting) {
+                            isRedirecting = true;
+                            if (pollTimer) clearInterval(pollTimer);
                             window.location.replace(data.url);
                         }
                     })
                     .catch(() => { });
             }
         };
-        setInterval(checkServer, 1000);
+        checkServer();
+        pollTimer = setInterval(checkServer, 1000);
     </script>
 </body>
 
